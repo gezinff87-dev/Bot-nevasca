@@ -291,7 +291,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('✅ Configuração Concluída!')
                 .setDescription(`**Sistema de tickets configurado com sucesso!**\n\n📌 **Cargo de Suporte:** ${cargo}\n📁 **Categoria:** ${categoria.name}`)
                 .setColor(0x00FF00)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by Nevasca Store' })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -371,7 +371,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('✅ Canal de Logs Configurado!')
                 .setDescription(`**Canal de logs configurado com sucesso!**\n\n📋 **Canal de Logs:** ${canal}`)
                 .setColor(0x00FF00)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by Nevasca Store' })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -403,7 +403,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('✅ Cargo Adicionado!')
                 .setDescription(`**Cargo de suporte adicionado com sucesso!**\n\n📌 **Cargo:** ${cargo}`)
                 .setColor(0x00FF00)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by Nevasca Store' })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -432,7 +432,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('🗑️ Cargo Removido!')
                 .setDescription(`**Cargo removido da lista de suporte!**\n\n📌 **Cargo:** ${cargo}`)
                 .setColor(0xFF6B6B)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by Nevasca Store' })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -454,7 +454,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('📋 Cargos de Suporte Configurados')
                 .setDescription(cargos)
                 .setColor(0x0099FF)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by Nevasca Store' })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -488,7 +488,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('✅ Botão Adicionado!')
                 .setDescription(`**Botão adicionado ao painel!**\n\n🏷️ **Label:** ${label}\n${emoji ? `😀 **Emoji:** ${emoji}\n` : ''}🎨 **Cor:** ${cor}`)
                 .setColor(0x00FF00)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by Nevasca Store' })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -517,7 +517,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('🗑️ Botão Removido!')
                 .setDescription(`**Botão removido do painel!**\n\n🏷️ **Label:** ${label}`)
                 .setColor(0xFF6B6B)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by Nevasca Store' })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -538,7 +538,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('🔘 Botões Configurados')
                 .setDescription(botoes)
                 .setColor(0x0099FF)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by Nevasca Store' })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -565,7 +565,7 @@ client.on('interactionCreate', async interaction => {
                     'O painel de tickets agora usará um select menu para escolher setores.' :
                     'O painel de tickets voltará a usar apenas botões.')
                 .setColor(ativo ? 0x00FF00 : 0xFF6B6B)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by Nevasca Store' })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -598,7 +598,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('✅ Setor Adicionado!')
                 .setDescription(`**Setor adicionado ao select menu!**\n\n📌 **Nome:** ${nome}\n📝 **Descrição:** ${descricao}${emoji ? `\n😀 **Emoji:** ${emoji}` : ''}`)
                 .setColor(0x00FF00)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by Navasca store' })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -627,7 +627,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('🗑️ Setor Removido!')
                 .setDescription(`**Setor removido do select menu!**\n\n📌 **Nome:** ${nome}`)
                 .setColor(0xFF6B6B)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by Nevasca Store' })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -648,7 +648,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('📂 Setores Configurados')
                 .setDescription(setores)
                 .setColor(0x0099FF)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by Nevasca Store' })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -677,7 +677,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('✅ Usuário Adicionado')
                     .setDescription(`${usuario} foi adicionado ao ticket por ${interaction.user}.`)
                     .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by Nevasca Store' })
                     .setTimestamp();
 
                 await interaction.reply({ embeds: [addEmbed] });
@@ -710,7 +710,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('🚫 Usuário Removido')
                     .setDescription(`${usuario} foi removido do ticket por ${interaction.user}.`)
                     .setColor(0xFF6B6B)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by Nevasca Store' })
                     .setTimestamp();
 
                 await interaction.reply({ embeds: [removeEmbed] });
@@ -788,7 +788,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('🎫 Ticket Aberto')
                     .setDescription(`Olá ${interaction.user}, bem-vindo ao seu ticket!\n\nUm membro da equipe de suporte irá atendê-lo em breve.\n\n**Para fechar ou reivindicar este ticket, clique nos botões abaixo.**`)
                     .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by Nevasca Store' })
                     .setTimestamp();
 
                 const claimButton = new ButtonBuilder()
@@ -821,7 +821,7 @@ client.on('interactionCreate', async interaction => {
                             .setTitle('📂 Ticket Aberto')
                             .setDescription(`**Usuário:** ${interaction.user} (${interaction.user.tag})\n**ID:** ${interaction.user.id}\n**Canal:** ${ticketChannel}\n**Horário:** <t:${Math.floor(Date.now() / 1000)}:F>`)
                             .setColor(0x00FF00)
-                            .setFooter({ text: 'Powered by STG Store' })
+                            .setFooter({ text: 'Powered by Nevasca Store' })
                             .setTimestamp();
                         
                         await logsChannel.send({ embeds: [logEmbed] }).catch(err => {
@@ -863,7 +863,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('✋ Ticket Reivindicado')
                 .setDescription(`Este ticket foi reivindicado por ${interaction.user}.\n\nEle será responsável pelo atendimento.`)
                 .setColor(0xFFD700)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by Nevasca Store' })
                 .setTimestamp();
 
             await interaction.reply({ embeds: [claimEmbed] });
@@ -884,7 +884,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('🔒 Ticket Fechado')
                 .setDescription(`Ticket fechado por ${interaction.user}.\n\nEste canal será deletado em 5 segundos...`)
                 .setColor(0xFF0000)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by Nevasca Store' })
                 .setTimestamp();
 
             await interaction.reply({ embeds: [closeEmbed] });
@@ -909,7 +909,7 @@ client.on('interactionCreate', async interaction => {
                             `**Horário:** <t:${Math.floor(Date.now() / 1000)}:F>`
                         )
                         .setColor(0xFF0000)
-                        .setFooter({ text: 'Powered by STG Store' })
+                        .setFooter({ text: 'Powered by Nevasca Store' })
                         .setTimestamp();
                     
                     await logsChannel.send({ embeds: [logEmbed] }).catch(err => {
@@ -1005,7 +1005,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('🎫 Ticket Aberto')
                     .setDescription(`Olá ${interaction.user}, bem-vindo ao seu ticket!\n\n**Setor selecionado:** ${setorSelecionado}\n\nUm membro da equipe de suporte irá atendê-lo em breve.\n\n**Para fechar ou reivindicar este ticket, clique nos botões abaixo.**`)
                     .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by Nevasca Store' })
                     .setTimestamp();
 
                 const claimButton = new ButtonBuilder()
@@ -1041,7 +1041,7 @@ client.on('interactionCreate', async interaction => {
                             .setTitle('📂 Ticket Aberto')
                             .setDescription(`**Usuário:** ${interaction.user} (${interaction.user.tag})\n**ID:** ${interaction.user.id}\n**Setor:** ${setorSelecionado}\n**Canal:** ${ticketChannel}\n**Horário:** <t:${Math.floor(Date.now() / 1000)}:F>`)
                             .setColor(0x00FF00)
-                            .setFooter({ text: 'Powered by STG Store' })
+                            .setFooter({ text: 'Powered by Nevasca Store' })
                             .setTimestamp();
                         
                         await logsChannel.send({ embeds: [logEmbed] }).catch(err => {
