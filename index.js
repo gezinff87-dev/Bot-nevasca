@@ -325,7 +325,7 @@ client.on('interactionCreate', async interaction => {
                 )
                 .setColor(0x0099FF)
                 .setFooter({ text: 'Powered by Nevasca Store' })
-                .setImage("https://i.postimg.cc/xd9zr6Wz/IMG-3310.jpg");
+                .setImage("https://i.postimg.cc/xd9zr6Wz/IMG-3310.jpg")
                 .setTimestamp();
 
             const selectMenu = new StringSelectMenuBuilder()
