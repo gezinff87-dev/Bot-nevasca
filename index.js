@@ -324,7 +324,7 @@ client.on('interactionCreate', async interaction => {
                     '> **Caso envie mensagens fora do horário de atendimento, aguarde. Assim que um staff estiver disponível, irá lhe atender com o setor de atendimento selecionado. Por favor, evite menções e abrir ticket à toa sem precisar de suporte.**'
                 )
                 .setColor(0x0099FF)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by Nevasca Store' })
                 .setTimestamp();
 
             const selectMenu = new StringSelectMenuBuilder()
