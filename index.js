@@ -41,6 +41,15 @@ function saveConfig() {
     }
 }
 
+function sanitizeUsername(username) {
+    return username
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .substring(0, 40);
+}
+
 const commands = [
     {
         name: 'setup',
@@ -281,7 +290,6 @@ client.on('interactionCreate', async interaction => {
 
             config[interaction.guildId].supportRoleId = cargo.id;
             config[interaction.guildId].categoryId = categoria.id;
-            // Inicializar novo sistema de múltiplos cargos
             if (!config[interaction.guildId].supportRoles) {
                 config[interaction.guildId].supportRoles = [cargo.id];
             }
@@ -378,7 +386,6 @@ client.on('interactionCreate', async interaction => {
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
-        // Comandos de gerenciamento de cargos
         if (interaction.commandName === 'add_cargo') {
             if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
                 return interaction.reply({ content: '❌ Você precisa ser um administrador!', ephemeral: true });
@@ -461,7 +468,6 @@ client.on('interactionCreate', async interaction => {
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
-        // Comandos de gerenciamento de botões
         if (interaction.commandName === 'add_button') {
             if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
                 return interaction.reply({ content: '❌ Você precisa ser um administrador!', ephemeral: true });
@@ -545,7 +551,6 @@ client.on('interactionCreate', async interaction => {
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
-        // Comandos de select menu
         if (interaction.commandName === 'set_select') {
             if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
                 return interaction.reply({ content: '❌ Você precisa ser um administrador!', ephemeral: true });
@@ -658,7 +663,7 @@ client.on('interactionCreate', async interaction => {
         if (interaction.commandName === 'adduser') {
             const channel = interaction.channel;
 
-            if (!channel.name.startsWith('ticket-')) {
+            if (!channel.name.startsWith('ticket-de-')) {
                 return interaction.reply({ 
                     content: '❌ Este comando só pode ser usado em canais de ticket!', 
                     ephemeral: true 
@@ -695,7 +700,7 @@ client.on('interactionCreate', async interaction => {
         if (interaction.commandName === 'remove_user') {
             const channel = interaction.channel;
 
-            if (!channel.name.startsWith('ticket-')) {
+            if (!channel.name.startsWith('ticket-de-')) {
                 return interaction.reply({ 
                     content: '❌ Este comando só pode ser usado em canais de ticket!', 
                     ephemeral: true 
@@ -738,7 +743,8 @@ client.on('interactionCreate', async interaction => {
                 });
             }
 
-            const ticketChannelName = `ticket-${interaction.user.id}`;
+            const sanitizedUsername = sanitizeUsername(interaction.user.username);
+            const ticketChannelName = `ticket-de-${sanitizedUsername}`;
             
             const existingChannel = interaction.guild.channels.cache.find(
                 ch => ch.name === ticketChannelName && ch.type === ChannelType.GuildText
@@ -814,7 +820,6 @@ client.on('interactionCreate', async interaction => {
 
                 console.log(`✅ Ticket criado: ${ticketChannelName} por ${interaction.user.tag}`);
 
-                // Enviar log de ticket aberto
                 if (guildConfig.logsChannelId) {
                     const logsChannel = interaction.guild.channels.cache.get(guildConfig.logsChannelId);
                     if (logsChannel) {
@@ -843,7 +848,7 @@ client.on('interactionCreate', async interaction => {
         if (interaction.customId === 'reivindicar_ticket') {
             const channel = interaction.channel;
 
-            if (!channel.name.startsWith('ticket-')) {
+            if (!channel.name.startsWith('ticket-de-')) {
                 return interaction.reply({ 
                     content: '❌ Este comando só pode ser usado em canais de ticket!', 
                     ephemeral: true 
@@ -874,7 +879,7 @@ client.on('interactionCreate', async interaction => {
         if (interaction.customId === 'fechar_ticket') {
             const channel = interaction.channel;
 
-            if (!channel.name.startsWith('ticket-')) {
+            if (!channel.name.startsWith('ticket-de-')) {
                 return interaction.reply({ 
                     content: '❌ Este comando só pode ser usado em canais de ticket!', 
                     ephemeral: true 
@@ -892,19 +897,16 @@ client.on('interactionCreate', async interaction => {
 
             console.log(`🔒 Ticket fechado: ${channel.name} por ${interaction.user.tag}`);
 
-            // Enviar log de ticket fechado
             const guildConfig = config[interaction.guildId];
             if (guildConfig && guildConfig.logsChannelId) {
                 const logsChannel = interaction.guild.channels.cache.get(guildConfig.logsChannelId);
                 if (logsChannel) {
-                    // Extrair o ID do usuário do nome do canal (formato: ticket-ID)
-                    const userId = channel.name.replace('ticket-', '');
-                    const ticketUser = await interaction.guild.members.fetch(userId).catch(() => null);
+                    const username = channel.name.replace('ticket-de-', '');
                     
                     const logEmbed = new EmbedBuilder()
                         .setTitle('🔒 Ticket Fechado')
                         .setDescription(
-                            `**Usuário do Ticket:** ${ticketUser ? `${ticketUser.user} (${ticketUser.user.tag})` : `ID: ${userId}`}\n` +
+                            `**Username do Ticket:** ${username}\n` +
                             `**Fechado por:** ${interaction.user} (${interaction.user.tag})\n` +
                             `**Canal:** #${channel.name}\n` +
                             `**Horário:** <t:${Math.floor(Date.now() / 1000)}:F>`
@@ -939,7 +941,8 @@ client.on('interactionCreate', async interaction => {
             }
 
             const setorSelecionado = interaction.values[0];
-            const ticketChannelName = `ticket-${interaction.user.id}`;
+            const sanitizedUsername = sanitizeUsername(interaction.user.username);
+            const ticketChannelName = `ticket-de-${sanitizedUsername}`;
             
             const existingChannel = interaction.guild.channels.cache.find(
                 ch => ch.name === ticketChannelName && ch.type === ChannelType.GuildText
@@ -1063,7 +1066,7 @@ client.on('interactionCreate', async interaction => {
 });
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 app.get('/', (req, res) => {
     res.send(`
@@ -1136,4 +1139,3 @@ client.login(process.env.TOKEN).catch(err => {
     console.error('⚠️  Verifique se o TOKEN no arquivo .env está correto!');
     process.exit(1);
 });
-
