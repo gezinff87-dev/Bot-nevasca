@@ -331,7 +331,7 @@ client.on('interactionCreate', async interaction => {
                     '> Sábado e Domingo\n7:00h as 21:30h\n\n' +
                     '> **Caso envie mensagens fora do horário de atendimento, aguarde. Assim que um staff estiver disponível, irá lhe atender com o setor de atendimento selecionado. Por favor, evite menções e abrir ticket à toa sem precisar de suporte.**'
                 )
-                .setColor('0xFF0000')
+                .setColor(0xFF0000)
                 .setFooter({ text: 'Powered by Neves Store' })
                 .setImage("https://i.postimg.cc/MHQjFcXB/standard-7.gif")
                 .setTimestamp();
