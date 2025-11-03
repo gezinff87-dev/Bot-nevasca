@@ -333,7 +333,7 @@ client.on('interactionCreate', async interaction => {
                 )
                 .setColor(0xFF0000)
                 .setFooter({ text: 'Powered by Neves Store' })
-                .setImage("https://i.postimg.cc/MHQjFcXB/standard-7.gif")
+                .setImage("https://i.postimg.cc/C1P1Ybzt/standard-8.gif")
                 .setTimestamp();
 
             const selectMenu = new StringSelectMenuBuilder()
