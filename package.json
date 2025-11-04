@@ -1,25 +1,17 @@
 {
-  "name": "discord-ticket-bot",
-  "version": "1.0.0",
-  "description": "Bot completo de tickets para Discord com sistema de persistência JSON",
+  "name": "discord-ticket-bot-multipanel",
+  "version": "2.0.0",
+  "description": "Sistema de tickets Discord com múltiplos painéis",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
-  "keywords": [
-    "discord",
-    "bot",
-    "tickets",
-    "discord.js"
-  ],
-  "author": "Astral Store",
+  "keywords": ["discord", "bot", "tickets", "multi-panel"],
+  "author": "STG Store",
   "license": "MIT",
   "dependencies": {
     "discord.js": "^14.14.1",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2"
-  },
-  "engines": {
-    "node": "20.x"
+    "express": "^4.18.2",
+    "dotenv": "^16.3.1"
   }
 }
