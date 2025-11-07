@@ -15,7 +15,6 @@ const client = new Client({
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 let config = {};
 
-// Sistema de contexto: rastreia qual painel cada usuário está editando
 const userPanelContext = new Map();
 
 function loadConfig() {
@@ -24,7 +23,6 @@ function loadConfig() {
             const data = fs.readFileSync(CONFIG_FILE, 'utf-8');
             config = JSON.parse(data);
             
-            // Migração automática: converter config antiga para novo formato
             Object.keys(config).forEach(guildId => {
                 if (!config[guildId].panels) {
                     console.log(`🔄 Migrando configuração antiga para ${guildId}...`);
@@ -79,6 +77,98 @@ function sanitizePanelId(name) {
         .substring(0, 32);
 }
 
+function isValidUrl(string) {
+    try {
+        const url = new URL(string);
+        return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch (_) {
+        return false;
+    }
+}
+
+function isValidEmoji(emoji) {
+    if (!emoji) return true;
+    
+    const customEmojiRegex = /<a?:\w+:\d+>/;
+    if (customEmojiRegex.test(emoji)) {
+        return true;
+    }
+    
+    const emojiRegex = /^[\p{Emoji}\p{Emoji_Presentation}\p{Emoji_Modifier_Base}\p{Emoji_Modifier}\p{Emoji_Component}]+$/u;
+    if (emojiRegex.test(emoji)) {
+        return true;
+    }
+    
+    return false;
+}
+
+function parseEmoji(emoji) {
+    if (!emoji) return null;
+    
+    const customEmojiRegex = /<(a)?:(\w+):(\d+)>/;
+    const match = emoji.match(customEmojiRegex);
+    
+    if (match) {
+        return {
+            id: match[3],
+            name: match[2],
+            animated: !!match[1]
+        };
+    }
+    
+    return emoji;
+}
+
+function validateButtonLabel(label) {
+    if (!label || label.trim().length === 0) {
+        return { valid: false, error: 'O label não pode estar vazio!' };
+    }
+    if (label.length > 80) {
+        return { valid: false, error: 'O label do botão não pode ter mais de 80 caracteres!' };
+    }
+    return { valid: true };
+}
+
+function validateCustomId(customId) {
+    if (!customId || customId.trim().length === 0) {
+        return { valid: false, error: 'O ID personalizado não pode estar vazio!' };
+    }
+    if (customId.length > 100) {
+        return { valid: false, error: 'O ID personalizado não pode ter mais de 100 caracteres!' };
+    }
+    return { valid: true };
+}
+
+function validateSelectMenuOption(label, value, description) {
+    if (!label || label.trim().length === 0) {
+        return { valid: false, error: 'O nome do setor não pode estar vazio!' };
+    }
+    if (!value || value.trim().length === 0) {
+        return { valid: false, error: 'O valor do setor não pode estar vazio!' };
+    }
+    if (!description || description.trim().length === 0) {
+        return { valid: false, error: 'A descrição do setor não pode estar vazia!' };
+    }
+    
+    if (label.length > 100) {
+        return { valid: false, error: 'O nome do setor não pode ter mais de 100 caracteres!' };
+    }
+    if (value.length > 100) {
+        return { valid: false, error: 'O valor do setor não pode ter mais de 100 caracteres!' };
+    }
+    if (description.length > 100) {
+        return { valid: false, error: 'A descrição do setor não pode ter mais de 100 caracteres!' };
+    }
+    
+    return { valid: true };
+}
+
+function createSafeCustomId(panelId, label) {
+    const maxPrefixLength = 100 - panelId.length - 15 - 2;
+    const safeLabelPart = label.substring(0, maxPrefixLength);
+    return `create_ticket:${panelId}:${safeLabelPart}`;
+}
+
 function getSelectedPanel(userId, guildId) {
     const contextKey = `${guildId}-${userId}`;
     return userPanelContext.get(contextKey);
@@ -94,6 +184,20 @@ function getPanelConfig(guildId, panelId) {
         return null;
     }
     return config[guildId].panels[panelId];
+}
+
+function checkEnvironmentVariables() {
+    const requiredVars = ['TOKEN', 'CLIENT_ID'];
+    const missing = requiredVars.filter(varName => !process.env[varName]);
+    
+    if (missing.length > 0) {
+        console.error('❌ ERRO: Variáveis de ambiente ausentes!');
+        console.error(`   Faltam: ${missing.join(', ')}`);
+        console.error('   Por favor, crie um arquivo .env com TOKEN e CLIENT_ID');
+        return false;
+    }
+    
+    return true;
 }
 
 const commands = [
@@ -457,8 +561,6 @@ client.once('ready', () => {
 client.on('interactionCreate', async interaction => {
     if (interaction.isChatInputCommand()) {
         
-        // ========== COMANDOS DE GERENCIAMENTO DE PAINÉIS ==========
-        
         if (interaction.commandName === 'criar_painel') {
             if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
                 return interaction.reply({ 
@@ -494,7 +596,6 @@ client.on('interactionCreate', async interaction => {
             };
             saveConfig();
 
-            // Auto-selecionar o painel recém-criado
             setSelectedPanel(interaction.user.id, interaction.guildId, panelId);
 
             const tipoTexto = tipo === 'select_menu' ? 'Select Menu (Dropdown)' : 'Botões';
@@ -580,7 +681,6 @@ client.on('interactionCreate', async interaction => {
 
             const panelType = panelConfig.type || 'select_menu';
             
-            // Validar se tem setores (para select menu) ou botões (para buttons)
             if (panelType === 'select_menu') {
                 if (!panelConfig.setores || panelConfig.setores.length === 0) {
                     return interaction.reply({ 
@@ -615,21 +715,20 @@ client.on('interactionCreate', async interaction => {
                 .setTimestamp();
 
             if (custom.image !== undefined) {
-                if (custom.image) {
+                if (custom.image && isValidUrl(custom.image)) {
                     embed.setImage(custom.image);
                 }
-            } else {
+            } else if (isValidUrl(defaultImage)) {
                 embed.setImage(defaultImage);
             }
 
-            if (custom.thumbnail) {
+            if (custom.thumbnail && isValidUrl(custom.thumbnail)) {
                 embed.setThumbnail(custom.thumbnail);
             }
 
             const components = [];
 
             if (panelType === 'select_menu') {
-                // Renderizar Select Menu
                 const selectMenu = new StringSelectMenuBuilder()
                     .setCustomId(`select_setor:${panelId}`)
                     .setPlaceholder('Selecione uma opção para abrir ticket');
@@ -640,8 +739,13 @@ client.on('interactionCreate', async interaction => {
                         .setDescription(setor.descricao)
                         .setValue(setor.nome);
                     
-                    if (setor.emoji) {
-                        option.setEmoji(setor.emoji);
+                    if (setor.emoji && isValidEmoji(setor.emoji)) {
+                        const parsedEmoji = parseEmoji(setor.emoji);
+                        if (typeof parsedEmoji === 'string') {
+                            option.setEmoji(parsedEmoji);
+                        } else if (parsedEmoji && parsedEmoji.id) {
+                            option.setEmoji(parsedEmoji);
+                        }
                     }
                     
                     selectMenu.addOptions(option);
@@ -649,30 +753,41 @@ client.on('interactionCreate', async interaction => {
 
                 components.push(new ActionRowBuilder().addComponents(selectMenu));
             } else {
-                // Renderizar Botões
                 const buttons = [];
                 panelConfig.customButtons.forEach(btn => {
                     const button = new ButtonBuilder()
-                        .setCustomId(`create_ticket:${panelId}:${btn.label}`)
+                        .setCustomId(createSafeCustomId(panelId, btn.label))
                         .setLabel(btn.label)
                         .setStyle(ButtonStyle[btn.style] || ButtonStyle.Primary);
                     
-                    if (btn.emoji) {
-                        button.setEmoji(btn.emoji);
+                    if (btn.emoji && isValidEmoji(btn.emoji)) {
+                        const parsedEmoji = parseEmoji(btn.emoji);
+                        if (typeof parsedEmoji === 'string') {
+                            button.setEmoji(parsedEmoji);
+                        } else if (parsedEmoji && parsedEmoji.id) {
+                            button.setEmoji(parsedEmoji);
+                        }
                     }
                     
                     buttons.push(button);
                 });
 
-                // Discord limita 5 botões por ActionRow, então dividimos se necessário
                 for (let i = 0; i < buttons.length; i += 5) {
                     const row = new ActionRowBuilder().addComponents(buttons.slice(i, i + 5));
                     components.push(row);
                 }
             }
 
-            await interaction.channel.send({ embeds: [embed], components });
-            return interaction.reply({ content: '✅ Painel de tickets enviado!', ephemeral: true });
+            try {
+                await interaction.channel.send({ embeds: [embed], components });
+                return interaction.reply({ content: '✅ Painel de tickets enviado!', ephemeral: true });
+            } catch (error) {
+                console.error('❌ Erro ao enviar painel:', error);
+                return interaction.reply({ 
+                    content: `❌ Erro ao enviar painel: ${error.message}`, 
+                    ephemeral: true 
+                });
+            }
         }
 
         if (interaction.commandName === 'deletar_painel') {
@@ -696,7 +811,6 @@ client.on('interactionCreate', async interaction => {
             delete config[interaction.guildId].panels[panelId];
             saveConfig();
 
-            // Limpar contexto de usuários que tinham esse painel selecionado
             userPanelContext.forEach((value, key) => {
                 if (value === panelId && key.startsWith(interaction.guildId)) {
                     userPanelContext.delete(key);
@@ -712,8 +826,6 @@ client.on('interactionCreate', async interaction => {
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
-
-        // ========== COMANDOS QUE REQUEREM PAINEL SELECIONADO ==========
 
         const commandsRequiringPanel = [
             'setup', 'logs', 'add_cargo', 'remove_cargo', 'list_cargos',
@@ -740,8 +852,6 @@ client.on('interactionCreate', async interaction => {
                     ephemeral: true 
                 });
             }
-
-            // ========== COMANDOS DE CONFIGURAÇÃO (aplicados ao painel selecionado) ==========
 
             if (interaction.commandName === 'setup') {
                 if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
@@ -881,6 +991,31 @@ client.on('interactionCreate', async interaction => {
                 const emoji = interaction.options.getString('emoji');
                 const cor = interaction.options.getString('cor') || 'Primary';
 
+                const labelValidation = validateButtonLabel(label);
+                if (!labelValidation.valid) {
+                    return interaction.reply({ 
+                        content: `❌ ${labelValidation.error}`, 
+                        ephemeral: true 
+                    });
+                }
+
+                const selectedPanelId = getSelectedPanel(interaction.user.id, interaction.guildId);
+                const testCustomId = createSafeCustomId(selectedPanelId, label);
+                const customIdValidation = validateCustomId(testCustomId);
+                if (!customIdValidation.valid) {
+                    return interaction.reply({ 
+                        content: `❌ O label é muito longo! O ID gerado (${testCustomId.length} chars) excede o limite de 100 caracteres. Use um label mais curto.`, 
+                        ephemeral: true 
+                    });
+                }
+
+                if (emoji && !isValidEmoji(emoji)) {
+                    return interaction.reply({ 
+                        content: '❌ Emoji inválido! Use um emoji Unicode válido (🎫) ou personalizado (<:nome:id>).', 
+                        ephemeral: true 
+                    });
+                }
+
                 if (!panelConfig.customButtons) {
                     panelConfig.customButtons = [];
                 }
@@ -959,6 +1094,21 @@ client.on('interactionCreate', async interaction => {
                 const descricao = interaction.options.getString('descricao');
                 const emoji = interaction.options.getString('emoji');
 
+                const setorValidation = validateSelectMenuOption(nome, nome, descricao);
+                if (!setorValidation.valid) {
+                    return interaction.reply({ 
+                        content: `❌ ${setorValidation.error}`, 
+                        ephemeral: true 
+                    });
+                }
+
+                if (emoji && !isValidEmoji(emoji)) {
+                    return interaction.reply({ 
+                        content: '❌ Emoji inválido! Use um emoji Unicode válido (🎫) ou personalizado (<:nome:id>).', 
+                        ephemeral: true 
+                    });
+                }
+
                 if (!panelConfig.setores) {
                     panelConfig.setores = [];
                 }
@@ -1028,8 +1178,6 @@ client.on('interactionCreate', async interaction => {
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            // ========== COMANDOS DE PERSONALIZAÇÃO ==========
-
             if (interaction.commandName === 'edit_titulo') {
                 if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
                     return interaction.reply({ content: '❌ Você precisa ser um administrador!', ephemeral: true });
@@ -1085,6 +1233,13 @@ client.on('interactionCreate', async interaction => {
 
                 const url = interaction.options.getString('url');
                 
+                if (url && !isValidUrl(url)) {
+                    return interaction.reply({ 
+                        content: '❌ URL inválida! Use uma URL válida começando com http:// ou https://.', 
+                        ephemeral: true 
+                    });
+                }
+                
                 if (!panelConfig.customization) {
                     panelConfig.customization = {};
                 }
@@ -1114,6 +1269,13 @@ client.on('interactionCreate', async interaction => {
                 }
 
                 const url = interaction.options.getString('url');
+                
+                if (url && !isValidUrl(url)) {
+                    return interaction.reply({ 
+                        content: '❌ URL inválida! Use uma URL válida começando com http:// ou https://.', 
+                        ephemeral: true 
+                    });
+                }
                 
                 if (!panelConfig.customization) {
                     panelConfig.customization = {};
@@ -1175,14 +1337,12 @@ client.on('interactionCreate', async interaction => {
 
                 let cor = interaction.options.getString('cor');
                 
-                // Converter hex para número
                 let colorValue;
                 if (cor.startsWith('#')) {
                     colorValue = parseInt(cor.substring(1), 16);
                 } else if (cor.startsWith('0x')) {
                     colorValue = parseInt(cor, 16);
                 } else {
-                    // Cores nomeadas comuns
                     const namedColors = {
                         'vermelho': 0xFF0000, 'red': 0xFF0000,
                         'verde': 0x00FF00, 'green': 0x00FF00,
@@ -1245,7 +1405,7 @@ client.on('interactionCreate', async interaction => {
                     .setFooter({ text: 'Powered by STG Store' })
                     .setTimestamp();
 
-                if (custom.thumbnail) {
+                if (custom.thumbnail && isValidUrl(custom.thumbnail)) {
                     embed.setThumbnail(custom.thumbnail);
                 }
 
@@ -1272,8 +1432,6 @@ client.on('interactionCreate', async interaction => {
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
         }
-
-        // ========== COMANDOS DE TICKET (não requerem painel selecionado) ==========
 
         if (interaction.commandName === 'adduser') {
             const channel = interaction.channel;
@@ -1346,11 +1504,8 @@ client.on('interactionCreate', async interaction => {
         }
     }
 
-    // ========== INTERAÇÕES COM BOTÕES ==========
-
     if (interaction.isButton()) {
         
-        // Tratamento para botões personalizados de criação de ticket
         if (interaction.customId.startsWith('create_ticket:')) {
             const parts = interaction.customId.split(':');
             const panelId = parts[1];
@@ -1396,6 +1551,14 @@ client.on('interactionCreate', async interaction => {
                             PermissionFlagsBits.ViewChannel, 
                             PermissionFlagsBits.SendMessages, 
                             PermissionFlagsBits.ReadMessageHistory
+                        ]
+                    },
+                    {
+                        id: client.user.id,
+                        allow: [
+                            PermissionFlagsBits.ViewChannel,
+                            PermissionFlagsBits.SendMessages,
+                            PermissionFlagsBits.ManageChannels
                         ]
                     }
                 ];
@@ -1460,11 +1623,6 @@ client.on('interactionCreate', async interaction => {
                     components: [row] 
                 });
 
-                await interaction.followUp({ 
-                    content: `✅ Ticket criado com sucesso! ${ticketChannel}`, 
-                    ephemeral: true 
-                });
-
                 console.log(`✅ Ticket criado: ${ticketChannelName} por ${interaction.user.tag} - Painel: ${panelConfig.name} - Botão: ${buttonLabel}`);
 
                 if (panelConfig.logsChannelId) {
@@ -1486,7 +1644,7 @@ client.on('interactionCreate', async interaction => {
             } catch (error) {
                 console.error('❌ Erro ao criar ticket:', error);
                 return interaction.followUp({ 
-                    content: '❌ Erro ao criar o ticket. Verifique as permissões do bot.', 
+                    content: `❌ Erro ao criar o ticket: ${error.message}`, 
                     ephemeral: true 
                 });
             }
@@ -1502,7 +1660,6 @@ client.on('interactionCreate', async interaction => {
                 });
             }
 
-            // Verificar se o usuário tem algum cargo de suporte configurado em algum painel
             let hasSupport = false;
             const guildConfig = config[interaction.guildId];
             if (guildConfig?.panels) {
@@ -1558,7 +1715,6 @@ client.on('interactionCreate', async interaction => {
 
             console.log(`🔒 Ticket fechado: ${channel.name} por ${interaction.user.tag}`);
 
-            // Enviar log para todos os painéis que tiverem logs configurados
             const guildConfig = config[interaction.guildId];
             if (guildConfig?.panels) {
                 for (const panel of Object.values(guildConfig.panels)) {
@@ -1594,8 +1750,6 @@ client.on('interactionCreate', async interaction => {
             }, 5000);
         }
     }
-
-    // ========== INTERAÇÕES COM SELECT MENU ==========
 
     if (interaction.isStringSelectMenu()) {
         if (interaction.customId.startsWith('select_setor:')) {
@@ -1641,6 +1795,14 @@ client.on('interactionCreate', async interaction => {
                             PermissionFlagsBits.ViewChannel, 
                             PermissionFlagsBits.SendMessages, 
                             PermissionFlagsBits.ReadMessageHistory
+                        ]
+                    },
+                    {
+                        id: client.user.id,
+                        allow: [
+                            PermissionFlagsBits.ViewChannel,
+                            PermissionFlagsBits.SendMessages,
+                            PermissionFlagsBits.ManageChannels
                         ]
                     }
                 ];
@@ -1726,15 +1888,13 @@ client.on('interactionCreate', async interaction => {
             } catch (error) {
                 console.error('❌ Erro ao criar ticket:', error);
                 return interaction.followUp({ 
-                    content: '❌ Erro ao criar o ticket. Verifique as permissões do bot.', 
+                    content: `❌ Erro ao criar o ticket: ${error.message}`, 
                     ephemeral: true 
                 });
             }
         }
     }
 });
-
-// ========== SERVIDOR WEB ==========
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -1804,6 +1964,12 @@ app.listen(PORT, '0.0.0.0', () => {
         console.error('❌ Erro no servidor HTTP:', err);
     }
 });
+
+if (!checkEnvironmentVariables()) {
+    console.error('⚠️  Bot não pode iniciar sem as variáveis de ambiente!');
+    console.error('   Crie um arquivo .env com TOKEN e CLIENT_ID do seu bot Discord.');
+    process.exit(1);
+}
 
 client.login(process.env.TOKEN).catch(err => {
     console.error('❌ Erro ao fazer login no Discord:', err);
