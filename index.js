@@ -53,7 +53,6 @@ function loadConfig() {
 function saveConfig() {
     try {
         fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 4), 'utf-8');
-        console.log('💾 Configurações salvas!');
     } catch (error) {
         console.error('❌ Erro ao salvar config.json:', error);
     }
