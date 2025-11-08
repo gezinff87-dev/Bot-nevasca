@@ -697,8 +697,6 @@ client.on('interactionCreate', async interaction => {
             }
 
             const custom = panelConfig.customization || {};
-            
-            const defaultTitle = `**${panelConfig.name}**`;
             const defaultDescription = '**Para que possamos iniciar o seu atendimento, selecione o setor desejado no menu abaixo.**\n\n' +
                 '**H͟o͟r͟á͟r͟i͟o͟ ͟d͟e͟ ͟A͟t͟e͟n͟d͟i͟m͟e͟n͟t͟o͟:**\n\n' +
                 '> Segunda a Sexta\n8:00h as 22:30h\n\n' +
