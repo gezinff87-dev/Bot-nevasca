@@ -434,25 +434,25 @@ const commands = [
     },
     {
         name: 'edit_titulo',
-        description: 'Edita o título do painel selecionado',
+        description: 'Edita o título do painel selecionado (deixe vazio para remover)',
         options: [
             {
                 name: 'titulo',
-                description: 'Novo título do painel',
+                description: 'Novo título do painel (deixe vazio para remover)',
                 type: 3,
-                required: true
+                required: false
             }
         ]
     },
     {
         name: 'edit_descricao',
-        description: 'Edita a descrição do painel selecionado',
+        description: 'Edita a descrição do painel selecionado (deixe vazio para remover)',
         options: [
             {
                 name: 'descricao',
-                description: 'Nova descrição do painel',
+                description: 'Nova descrição do painel (deixe vazio para remover)',
                 type: 3,
-                required: true
+                required: false
             }
         ]
     },
@@ -1188,13 +1188,19 @@ client.on('interactionCreate', async interaction => {
                     panelConfig.customization = {};
                 }
                 
-                panelConfig.customization.title = titulo;
+                if (titulo) {
+                    panelConfig.customization.title = titulo;
+                } else {
+                    delete panelConfig.customization.title;
+                }
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle('✅ Título Atualizado!')
-                    .setDescription(`**Novo título do painel "${panelConfig.name}":**\n\n${titulo}`)
-                    .setColor(0x00FF00)
+                    .setTitle(titulo ? '✅ Título Atualizado!' : '🗑️ Título Removido!')
+                    .setDescription(titulo ? 
+                        `**Novo título do painel "${panelConfig.name}":**\n\n${titulo}` :
+                        `**Título removido do painel "${panelConfig.name}". O painel usará o título padrão.**`)
+                    .setColor(titulo ? 0x00FF00 : 0xFF6B6B)
                     .setFooter({ text: 'Powered by STG Store' })
                     .setTimestamp();
 
@@ -1212,13 +1218,19 @@ client.on('interactionCreate', async interaction => {
                     panelConfig.customization = {};
                 }
                 
-                panelConfig.customization.description = descricao;
+                if (descricao) {
+                    panelConfig.customization.description = descricao;
+                } else {
+                    delete panelConfig.customization.description;
+                }
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle('✅ Descrição Atualizada!')
-                    .setDescription(`**Nova descrição configurada para o painel "${panelConfig.name}"!**`)
-                    .setColor(0x00FF00)
+                    .setTitle(descricao ? '✅ Descrição Atualizada!' : '🗑️ Descrição Removida!')
+                    .setDescription(descricao ? 
+                        `**Nova descrição configurada para o painel "${panelConfig.name}"!**\n\n${descricao}` :
+                        `**Descrição removida do painel "${panelConfig.name}". O painel usará a descrição padrão.**`)
+                    .setColor(descricao ? 0x00FF00 : 0xFF6B6B)
                     .setFooter({ text: 'Powered by STG Store' })
                     .setTimestamp();
 
