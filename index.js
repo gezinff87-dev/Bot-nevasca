@@ -486,7 +486,7 @@ const commands = [
         options: [
             {
                 name: 'texto',
-                description: 'Texto do rodapé',
+                description: 'Texto do rodapé (deixe vazio para remover)',
                 type: 3,
                 required: false
             }
@@ -705,13 +705,27 @@ client.on('interactionCreate', async interaction => {
                 '> Sábado e Domingo\n7:00h as 21:30h\n\n' +
                 '> **Caso envie mensagens fora do horário de atendimento, aguarde. Assim que um staff estiver disponível, irá lhe atender com o setor de atendimento selecionado. Por favor, evite menções e abrir ticket à toa sem precisar de suporte.**';
             const defaultImage = "https://i.postimg.cc/cCfQFsxF/standard-14.gif";
+            const defaultFooter = 'Powered by STG Store';
 
             const embed = new EmbedBuilder()
-                .setTitle(custom.title || defaultTitle)
-                .setDescription(custom.description || defaultDescription)
                 .setColor(custom.color !== undefined ? custom.color : 0x0099FF)
-                .setFooter({ text: custom.footer || 'Powered by STG Store' })
                 .setTimestamp();
+
+            if (custom.title !== undefined) {
+                if (custom.title && custom.title.trim().length > 0) {
+                    embed.setTitle(custom.title);
+                }
+            } else {
+                embed.setTitle(defaultTitle);
+            }
+
+            if (custom.description !== undefined) {
+                if (custom.description && custom.description.trim().length > 0) {
+                    embed.setDescription(custom.description);
+                }
+            } else {
+                embed.setDescription(defaultDescription);
+            }
 
             if (custom.image !== undefined) {
                 if (custom.image && isValidUrl(custom.image)) {
@@ -721,8 +735,18 @@ client.on('interactionCreate', async interaction => {
                 embed.setImage(defaultImage);
             }
 
-            if (custom.thumbnail && isValidUrl(custom.thumbnail)) {
-                embed.setThumbnail(custom.thumbnail);
+            if (custom.thumbnail !== undefined) {
+                if (custom.thumbnail && isValidUrl(custom.thumbnail)) {
+                    embed.setThumbnail(custom.thumbnail);
+                }
+            }
+
+            if (custom.footer !== undefined) {
+                if (custom.footer && custom.footer.trim().length > 0) {
+                    embed.setFooter({ text: custom.footer });
+                }
+            } else {
+                embed.setFooter({ text: defaultFooter });
             }
 
             const components = [];
@@ -1266,7 +1290,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle(url ? '✅ Imagem Atualizada!' : '🗑️ Imagem Removida!')
                     .setDescription(url ? 
                         `**Imagem do painel "${panelConfig.name}" atualizada!**\n\n📷 URL: ${url}` :
-                        `**Imagem removida do painel "${panelConfig.name}".**`)
+                        `**Imagem removida do painel "${panelConfig.name}". O painel usará a imagem padrão.**`)
                     .setColor(url ? 0x00FF00 : 0xFF6B6B)
                     .setFooter({ text: 'Powered by STG Store' })
                     .setTimestamp();
@@ -1333,7 +1357,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle(texto ? '✅ Rodapé Atualizado!' : '🗑️ Rodapé Removido!')
                     .setDescription(texto ? 
                         `**Rodapé do painel "${panelConfig.name}" atualizado!**\n\n📝 Texto: ${texto}` :
-                        `**Rodapé removido do painel "${panelConfig.name}".**`)
+                        `**Rodapé removido do painel "${panelConfig.name}". O painel usará o rodapé padrão.**`)
                     .setColor(texto ? 0x00FF00 : 0xFF6B6B)
                     .setFooter({ text: 'Powered by STG Store' })
                     .setTimestamp();
