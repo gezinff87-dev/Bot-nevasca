@@ -711,41 +711,33 @@ client.on('interactionCreate', async interaction => {
                 .setColor(custom.color !== undefined ? custom.color : 0x0099FF)
                 .setTimestamp();
 
-            if (custom.title !== undefined) {
-                if (custom.title && custom.title.trim().length > 0) {
-                    embed.setTitle(custom.title);
-                }
-            } else {
+            if (custom.title !== undefined && custom.title !== "") {
+                embed.setTitle(custom.title);
+            } else if (custom.title === undefined) {
                 embed.setTitle(defaultTitle);
             }
 
-            if (custom.description !== undefined) {
-                if (custom.description && custom.description.trim().length > 0) {
-                    embed.setDescription(custom.description);
-                }
-            } else {
+            if (custom.description !== undefined && custom.description !== "") {
+                embed.setDescription(custom.description);
+            } else if (custom.description === undefined) {
                 embed.setDescription(defaultDescription);
             }
 
-            if (custom.image !== undefined) {
-                if (custom.image && isValidUrl(custom.image)) {
+            if (custom.image !== undefined && custom.image !== "") {
+                if (isValidUrl(custom.image)) {
                     embed.setImage(custom.image);
                 }
-            } else if (isValidUrl(defaultImage)) {
+            } else if (custom.image === undefined && isValidUrl(defaultImage)) {
                 embed.setImage(defaultImage);
             }
 
-            if (custom.thumbnail !== undefined) {
-                if (custom.thumbnail && isValidUrl(custom.thumbnail)) {
-                    embed.setThumbnail(custom.thumbnail);
-                }
+            if (custom.thumbnail !== undefined && custom.thumbnail !== "" && isValidUrl(custom.thumbnail)) {
+                embed.setThumbnail(custom.thumbnail);
             }
 
-            if (custom.footer !== undefined) {
-                if (custom.footer && custom.footer.trim().length > 0) {
-                    embed.setFooter({ text: custom.footer });
-                }
-            } else {
+            if (custom.footer !== undefined && custom.footer !== "") {
+                embed.setFooter({ text: custom.footer });
+            } else if (custom.footer === undefined) {
                 embed.setFooter({ text: defaultFooter });
             }
 
@@ -1212,19 +1204,17 @@ client.on('interactionCreate', async interaction => {
                     panelConfig.customization = {};
                 }
                 
-                if (titulo) {
+                if (titulo !== null) {
                     panelConfig.customization.title = titulo;
-                } else {
-                    delete panelConfig.customization.title;
                 }
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle(titulo ? '✅ Título Atualizado!' : '🗑️ Título Removido!')
-                    .setDescription(titulo ? 
+                    .setTitle(titulo && titulo.trim() ? '✅ Título Atualizado!' : '🗑️ Título Removido!')
+                    .setDescription(titulo && titulo.trim() ? 
                         `**Novo título do painel "${panelConfig.name}":**\n\n${titulo}` :
-                        `**Título removido do painel "${panelConfig.name}". O painel usará o título padrão.**`)
-                    .setColor(titulo ? 0x00FF00 : 0xFF6B6B)
+                        `**Título removido do painel "${panelConfig.name}". Nenhum título será exibido.**`)
+                    .setColor(titulo && titulo.trim() ? 0x00FF00 : 0xFF6B6B)
                     .setFooter({ text: 'Powered by STG Store' })
                     .setTimestamp();
 
@@ -1242,19 +1232,17 @@ client.on('interactionCreate', async interaction => {
                     panelConfig.customization = {};
                 }
                 
-                if (descricao) {
+                if (descricao !== null) {
                     panelConfig.customization.description = descricao;
-                } else {
-                    delete panelConfig.customization.description;
                 }
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle(descricao ? '✅ Descrição Atualizada!' : '🗑️ Descrição Removida!')
-                    .setDescription(descricao ? 
+                    .setTitle(descricao && descricao.trim() ? '✅ Descrição Atualizada!' : '🗑️ Descrição Removida!')
+                    .setDescription(descricao && descricao.trim() ? 
                         `**Nova descrição configurada para o painel "${panelConfig.name}"!**\n\n${descricao}` :
-                        `**Descrição removida do painel "${panelConfig.name}". O painel usará a descrição padrão.**`)
-                    .setColor(descricao ? 0x00FF00 : 0xFF6B6B)
+                        `**Descrição removida do painel "${panelConfig.name}". Nenhuma descrição será exibida.**`)
+                    .setColor(descricao && descricao.trim() ? 0x00FF00 : 0xFF6B6B)
                     .setFooter({ text: 'Powered by STG Store' })
                     .setTimestamp();
 
@@ -1268,7 +1256,7 @@ client.on('interactionCreate', async interaction => {
 
                 const url = interaction.options.getString('url');
                 
-                if (url && !isValidUrl(url)) {
+                if (url && url.trim() && !isValidUrl(url)) {
                     return interaction.reply({ 
                         content: '❌ URL inválida! Use uma URL válida começando com http:// ou https://.', 
                         ephemeral: true 
@@ -1279,19 +1267,17 @@ client.on('interactionCreate', async interaction => {
                     panelConfig.customization = {};
                 }
                 
-                if (url) {
+                if (url !== null) {
                     panelConfig.customization.image = url;
-                } else {
-                    delete panelConfig.customization.image;
                 }
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle(url ? '✅ Imagem Atualizada!' : '🗑️ Imagem Removida!')
-                    .setDescription(url ? 
+                    .setTitle(url && url.trim() ? '✅ Imagem Atualizada!' : '🗑️ Imagem Removida!')
+                    .setDescription(url && url.trim() ? 
                         `**Imagem do painel "${panelConfig.name}" atualizada!**\n\n📷 URL: ${url}` :
-                        `**Imagem removida do painel "${panelConfig.name}". O painel usará a imagem padrão.**`)
-                    .setColor(url ? 0x00FF00 : 0xFF6B6B)
+                        `**Imagem removida do painel "${panelConfig.name}". Nenhuma imagem será exibida.**`)
+                    .setColor(url && url.trim() ? 0x00FF00 : 0xFF6B6B)
                     .setFooter({ text: 'Powered by STG Store' })
                     .setTimestamp();
 
@@ -1305,7 +1291,7 @@ client.on('interactionCreate', async interaction => {
 
                 const url = interaction.options.getString('url');
                 
-                if (url && !isValidUrl(url)) {
+                if (url && url.trim() && !isValidUrl(url)) {
                     return interaction.reply({ 
                         content: '❌ URL inválida! Use uma URL válida começando com http:// ou https://.', 
                         ephemeral: true 
@@ -1316,19 +1302,17 @@ client.on('interactionCreate', async interaction => {
                     panelConfig.customization = {};
                 }
                 
-                if (url) {
+                if (url !== null) {
                     panelConfig.customization.thumbnail = url;
-                } else {
-                    delete panelConfig.customization.thumbnail;
                 }
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle(url ? '✅ Thumbnail Atualizada!' : '🗑️ Thumbnail Removida!')
-                    .setDescription(url ? 
+                    .setTitle(url && url.trim() ? '✅ Thumbnail Atualizada!' : '🗑️ Thumbnail Removida!')
+                    .setDescription(url && url.trim() ? 
                         `**Thumbnail do painel "${panelConfig.name}" atualizada!**\n\n📷 URL: ${url}` :
-                        `**Thumbnail removida do painel "${panelConfig.name}".**`)
-                    .setColor(url ? 0x00FF00 : 0xFF6B6B)
+                        `**Thumbnail removida do painel "${panelConfig.name}". Nenhuma thumbnail será exibida.**`)
+                    .setColor(url && url.trim() ? 0x00FF00 : 0xFF6B6B)
                     .setFooter({ text: 'Powered by STG Store' })
                     .setTimestamp();
 
@@ -1346,19 +1330,17 @@ client.on('interactionCreate', async interaction => {
                     panelConfig.customization = {};
                 }
                 
-                if (texto) {
+                if (texto !== null) {
                     panelConfig.customization.footer = texto;
-                } else {
-                    delete panelConfig.customization.footer;
                 }
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle(texto ? '✅ Rodapé Atualizado!' : '🗑️ Rodapé Removido!')
-                    .setDescription(texto ? 
+                    .setTitle(texto && texto.trim() ? '✅ Rodapé Atualizado!' : '🗑️ Rodapé Removido!')
+                    .setDescription(texto && texto.trim() ? 
                         `**Rodapé do painel "${panelConfig.name}" atualizado!**\n\n📝 Texto: ${texto}` :
-                        `**Rodapé removido do painel "${panelConfig.name}". O painel usará o rodapé padrão.**`)
-                    .setColor(texto ? 0x00FF00 : 0xFF6B6B)
+                        `**Rodapé removido do painel "${panelConfig.name}". Nenhum rodapé será exibido.**`)
+                    .setColor(texto && texto.trim() ? 0x00FF00 : 0xFF6B6B)
                     .setFooter({ text: 'Powered by STG Store' })
                     .setTimestamp();
 
