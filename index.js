@@ -602,7 +602,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('✅ Painel Criado!')
                 .setDescription(`**Painel de tickets criado com sucesso!**\n\n📋 **Nome:** ${nome}\n🆔 **ID:** \`${panelId}\`\n🎛️ **Tipo:** ${tipoTexto}\n\n✨ Este painel foi automaticamente selecionado. Use \`/setup\` para configurá-lo.`)
                 .setColor(0x00FF00)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by 7M Store' })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -654,7 +654,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('✅ Painel Selecionado!')
                 .setDescription(`Você agora está editando: **${panel.name}**\n\nTodos os comandos de configuração serão aplicados a este painel.`)
                 .setColor(0x00FF00)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by 7M Store' })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -704,8 +704,8 @@ client.on('interactionCreate', async interaction => {
                 '> Segunda a Sexta\n8:00h as 22:30h\n\n' +
                 '> Sábado e Domingo\n7:00h as 21:30h\n\n' +
                 '> **Caso envie mensagens fora do horário de atendimento, aguarde. Assim que um staff estiver disponível, irá lhe atender com o setor de atendimento selecionado. Por favor, evite menções e abrir ticket à toa sem precisar de suporte.**';
-            const defaultImage = "https://i.postimg.cc/cCfQFsxF/standard-14.gif";
-            const defaultFooter = 'Powered by STG Store';
+            const defaultImage = "https://i.postimg.cc/RFbMNyv3/standard-9.gif";
+            const defaultFooter = 'Powered by 7M Store';
 
             const embed = new EmbedBuilder()
                 .setColor(custom.color !== undefined ? custom.color : 0x0099FF)
@@ -836,7 +836,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('🗑️ Painel Deletado!')
                 .setDescription(`O painel **${panelName}** foi removido.`)
                 .setColor(0xFF6B6B)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by 7M Store' })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -892,7 +892,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('✅ Configuração Concluída!')
                     .setDescription(`**Painel "${panelConfig.name}" configurado com sucesso!**\n\n📌 **Cargo de Suporte:** ${cargo}\n📁 **Categoria:** ${categoria.name}`)
                     .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -914,7 +914,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('✅ Canal de Logs Configurado!')
                     .setDescription(`**Canal de logs do painel "${panelConfig.name}" configurado!**\n\n📋 **Canal de Logs:** ${canal}`)
                     .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -942,7 +942,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('✅ Cargo Adicionado!')
                     .setDescription(`**Cargo adicionado ao painel "${panelConfig.name}"!**\n\n📌 **Cargo:** ${cargo}`)
                     .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -971,7 +971,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('🗑️ Cargo Removido!')
                     .setDescription(`**Cargo removido do painel "${panelConfig.name}"!**\n\n📌 **Cargo:** ${cargo}`)
                     .setColor(0xFF6B6B)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -991,7 +991,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle(`📋 Cargos - ${panelConfig.name}`)
                     .setDescription(cargos)
                     .setColor(0x0099FF)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -1046,7 +1046,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('✅ Botão Adicionado!')
                     .setDescription(`**Botão adicionado ao painel "${panelConfig.name}"!**\n\n🏷️ **Label:** ${label}\n${emoji ? `😀 **Emoji:** ${emoji}\n` : ''}🎨 **Cor:** ${cor}`)
                     .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -1075,7 +1075,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('🗑️ Botão Removido!')
                     .setDescription(`**Botão removido do painel "${panelConfig.name}"!**\n\n🏷️ **Label:** ${label}`)
                     .setColor(0xFF6B6B)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -1094,7 +1094,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle(`🔘 Botões - ${panelConfig.name}`)
                     .setDescription(botoes)
                     .setColor(0x0099FF)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -1139,7 +1139,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('✅ Setor Adicionado!')
                     .setDescription(`**Setor adicionado ao painel "${panelConfig.name}"!**\n\n📌 **Nome:** ${nome}\n📝 **Descrição:** ${descricao}${emoji ? `\n😀 **Emoji:** ${emoji}` : ''}`)
                     .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -1168,7 +1168,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('🗑️ Setor Removido!')
                     .setDescription(`**Setor removido do painel "${panelConfig.name}"!**\n\n📌 **Nome:** ${nome}`)
                     .setColor(0xFF6B6B)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -1187,7 +1187,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle(`📂 Setores - ${panelConfig.name}`)
                     .setDescription(setores)
                     .setColor(0x0099FF)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -1215,7 +1215,7 @@ client.on('interactionCreate', async interaction => {
                         `**Novo título do painel "${panelConfig.name}":**\n\n${titulo}` :
                         `**Título removido do painel "${panelConfig.name}". Nenhum título será exibido.**`)
                     .setColor(titulo && titulo.trim() ? 0x00FF00 : 0xFF6B6B)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -1243,7 +1243,7 @@ client.on('interactionCreate', async interaction => {
                         `**Nova descrição configurada para o painel "${panelConfig.name}"!**\n\n${descricao}` :
                         `**Descrição removida do painel "${panelConfig.name}". Nenhuma descrição será exibida.**`)
                     .setColor(descricao && descricao.trim() ? 0x00FF00 : 0xFF6B6B)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -1278,7 +1278,7 @@ client.on('interactionCreate', async interaction => {
                         `**Imagem do painel "${panelConfig.name}" atualizada!**\n\n📷 URL: ${url}` :
                         `**Imagem removida do painel "${panelConfig.name}". Nenhuma imagem será exibida.**`)
                     .setColor(url && url.trim() ? 0x00FF00 : 0xFF6B6B)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -1313,7 +1313,7 @@ client.on('interactionCreate', async interaction => {
                         `**Thumbnail do painel "${panelConfig.name}" atualizada!**\n\n📷 URL: ${url}` :
                         `**Thumbnail removida do painel "${panelConfig.name}". Nenhuma thumbnail será exibida.**`)
                     .setColor(url && url.trim() ? 0x00FF00 : 0xFF6B6B)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -1341,7 +1341,7 @@ client.on('interactionCreate', async interaction => {
                         `**Rodapé do painel "${panelConfig.name}" atualizado!**\n\n📝 Texto: ${texto}` :
                         `**Rodapé removido do painel "${panelConfig.name}". Nenhum rodapé será exibido.**`)
                     .setColor(texto && texto.trim() ? 0x00FF00 : 0xFF6B6B)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -1393,7 +1393,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('✅ Cor Atualizada!')
                     .setDescription(`**Cor da borda do painel "${panelConfig.name}" atualizada!**`)
                     .setColor(colorValue)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -1419,7 +1419,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('🎨 Personalização do Painel')
                     .setDescription(info)
                     .setColor(custom.color || 0x0099FF)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 if (custom.thumbnail && isValidUrl(custom.thumbnail)) {
@@ -1443,7 +1443,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('✅ Tipo de Painel Atualizado!')
                     .setDescription(`**O painel "${panelConfig.name}" agora usa:** ${tipoTexto}\n\n${tipo === 'buttons' ? '💡 Use \`/add_button\` para adicionar botões personalizados!' : '💡 Use \`/add_setor\` para adicionar opções ao menu!'}`)
                     .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -1473,7 +1473,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('✅ Usuário Adicionado')
                     .setDescription(`${usuario} foi adicionado ao ticket por ${interaction.user}.`)
                     .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 await interaction.reply({ embeds: [addEmbed] });
@@ -1506,7 +1506,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('🚫 Usuário Removido')
                     .setDescription(`${usuario} foi removido do ticket por ${interaction.user}.`)
                     .setColor(0xFF6B6B)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 await interaction.reply({ embeds: [removeEmbed] });
@@ -1613,7 +1613,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('🎫 Ticket Aberto')
                     .setDescription(`Olá ${interaction.user}, bem-vindo ao seu ticket!\n\n**Painel:** ${panelConfig.name}\n**Setor selecionado:** ${buttonLabel}\n\nUm membro da equipe de suporte irá atendê-lo em breve.\n\n**Para fechar ou reivindicar este ticket, clique nos botões abaixo.**`)
                     .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 const claimButton = new ButtonBuilder()
@@ -1649,7 +1649,7 @@ client.on('interactionCreate', async interaction => {
                             .setTitle('📂 Ticket Aberto')
                             .setDescription(`**Usuário:** ${interaction.user} (${interaction.user.tag})\n**ID:** ${interaction.user.id}\n**Painel:** ${panelConfig.name}\n**Categoria:** ${buttonLabel}\n**Canal:** ${ticketChannel}\n**Horário:** <t:${Math.floor(Date.now() / 1000)}:F>`)
                             .setColor(0x00FF00)
-                            .setFooter({ text: 'Powered by STG Store' })
+                            .setFooter({ text: 'Powered by 7M Store' })
                             .setTimestamp();
                         
                         await logsChannel.send({ embeds: [logEmbed] }).catch(err => {
@@ -1704,7 +1704,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('✋ Ticket Reivindicado')
                 .setDescription(`Este ticket foi reivindicado por ${interaction.user}.\n\nEle será responsável pelo atendimento.`)
                 .setColor(0xFFD700)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by 7M Store' })
                 .setTimestamp();
 
             await interaction.reply({ embeds: [claimEmbed] });
@@ -1725,7 +1725,7 @@ client.on('interactionCreate', async interaction => {
                 .setTitle('🔒 Ticket Fechado')
                 .setDescription(`Ticket fechado por ${interaction.user}.\n\nEste canal será deletado em 5 segundos...`)
                 .setColor(0xFF0000)
-                .setFooter({ text: 'Powered by STG Store' })
+                .setFooter({ text: 'Powered by 7M Store' })
                 .setTimestamp();
 
             await interaction.reply({ embeds: [closeEmbed] });
@@ -1749,7 +1749,7 @@ client.on('interactionCreate', async interaction => {
                                     `**Horário:** <t:${Math.floor(Date.now() / 1000)}:F>`
                                 )
                                 .setColor(0xFF0000)
-                                .setFooter({ text: 'Powered by STG Store' })
+                                .setFooter({ textticketChannel 'Store' })
                                 .setTimestamp();
                             
                             await logsChannel.send({ embeds: [logEmbed] }).catch(err => {
