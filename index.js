@@ -1749,7 +1749,7 @@ client.on('interactionCreate', async interaction => {
                                     `**Horário:** <t:${Math.floor(Date.now() / 1000)}:F>`
                                 )
                                 .setColor(0xFF0000)
-                                .setFooter({ textticketChannel 'Store' })
+                                .setFooter({ textticketChannel '7M Store' })
                                 .setTimestamp();
                             
                             await logsChannel.send({ embeds: [logEmbed] }).catch(err => {
@@ -1857,7 +1857,7 @@ client.on('interactionCreate', async interaction => {
                     .setTitle('🎫 Ticket Aberto')
                     .setDescription(`Olá ${interaction.user}, bem-vindo ao seu ticket!\n\n**Painel:** ${panelConfig.name}\n**Setor selecionado:** ${setorSelecionado}\n\nUm membro da equipe de suporte irá atendê-lo em breve.\n\n**Para fechar ou reivindicar este ticket, clique nos botões abaixo.**`)
                     .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by STG Store' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 const claimButton = new ButtonBuilder()
@@ -1893,7 +1893,7 @@ client.on('interactionCreate', async interaction => {
                             .setTitle('📂 Ticket Aberto')
                             .setDescription(`**Usuário:** ${interaction.user} (${interaction.user.tag})\n**ID:** ${interaction.user.id}\n**Painel:** ${panelConfig.name}\n**Setor:** ${setorSelecionado}\n**Canal:** ${ticketChannel}\n**Horário:** <t:${Math.floor(Date.now() / 1000)}:F>`)
                             .setColor(0x00FF00)
-                            .setFooter({ text: 'Powered by STG Store' })
+                            .setFooter({ text: 'Powered by 7M Store' })
                             .setTimestamp();
                         
                         await logsChannel.send({ embeds: [logEmbed] }).catch(err => {
