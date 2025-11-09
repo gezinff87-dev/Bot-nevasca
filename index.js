@@ -1749,7 +1749,7 @@ client.on('interactionCreate', async interaction => {
                                     `**Horário:** <t:${Math.floor(Date.now() / 1000)}:F>`
                                 )
                                 .setColor(0xFF0000)
-                                .setFooter({ textticketChannel '7M Store' })
+                                .setFooter({ text: '7M Store' })
                                 .setTimestamp();
                             
                             await logsChannel.send({ embeds: [logEmbed] }).catch(err => {
