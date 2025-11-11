@@ -2431,70 +2431,71 @@ client.on("interactionCreate", async (interaction) => {
 
         // Ticket gear interactions
         if (interaction.customId === "ticket_settings") {
-            const context = getTicketContext(interaction.channelId);
+            try {
+                const context = getTicketContext(interaction.channelId);
 
-            if (!context) {
-                return interaction.reply({
-                    content:
-                        "❌ Não foi possível recuperar as informações deste ticket!",
-                    ephemeral: true,
-                });
-            }
+                if (!context) {
+                    return interaction.reply({
+                        content:
+                            "❌ Não foi possível recuperar as informações deste ticket! (Bot pode ter sido reiniciado)",
+                        ephemeral: true,
+                    });
+                }
 
-            const panelConfig = getPanelConfig(
-                context.guildId,
-                context.panelId,
-            );
-            if (!panelConfig) {
-                return interaction.reply({
-                    content: "❌ Configuração do painel não encontrada!",
-                    ephemeral: true,
-                });
-            }
-
-            let hasSupport = false;
-            if (
-                panelConfig.supportRoles &&
-                panelConfig.supportRoles.length > 0
-            ) {
-                hasSupport = panelConfig.supportRoles.some((roleId) =>
-                    interaction.member.roles.cache.has(roleId),
+                const panelConfig = getPanelConfig(
+                    context.guildId,
+                    context.panelId,
                 );
-            } else if (panelConfig.supportRoleId) {
-                hasSupport = interaction.member.roles.cache.has(
-                    panelConfig.supportRoleId,
-                );
-            }
+                if (!panelConfig) {
+                    return interaction.reply({
+                        content: "❌ Configuração do painel não encontrada!",
+                        ephemeral: true,
+                    });
+                }
 
-            if (
-                !hasSupport &&
-                !interaction.member.permissions.has(
-                    PermissionFlagsBits.Administrator,
-                )
-            ) {
-                return interaction.reply({
-                    content:
-                        "❌ Apenas membros da equipe de suporte podem acessar as configurações do ticket!",
-                    ephemeral: true,
-                });
-            }
+                let hasSupport = false;
+                if (
+                    panelConfig.supportRoles &&
+                    panelConfig.supportRoles.length > 0
+                ) {
+                    hasSupport = panelConfig.supportRoles.some((roleId) =>
+                        interaction.member.roles.cache.has(roleId),
+                    );
+                } else if (panelConfig.supportRoleId) {
+                    hasSupport = interaction.member.roles.cache.has(
+                        panelConfig.supportRoleId,
+                    );
+                }
 
-            const settingsEmbed = new EmbedBuilder()
-                .setTitle("⚙️ Configurações do Ticket")
-                .setDescription(
-                    "Selecione uma ação abaixo:\n\nHoje às " +
-                        new Date().toLocaleTimeString("pt-BR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                        }),
-                )
-                .setColor(0x5865f2)
-                .setTimestamp();
+                if (
+                    !hasSupport &&
+                    !interaction.member.permissions.has(
+                        PermissionFlagsBits.Administrator,
+                    )
+                ) {
+                    return interaction.reply({
+                        content:
+                            "❌ Apenas membros da equipe de suporte podem acessar as configurações do ticket!",
+                        ephemeral: true,
+                    });
+                }
 
-            const settingsSelectMenu = new StringSelectMenuBuilder()
-                .setCustomId("ticket_settings_menu")
-                .setPlaceholder("Selecione uma ação abaixo:")
-                .addOptions([
+                const settingsEmbed = new EmbedBuilder()
+                    .setTitle("⚙️ Configurações do Ticket")
+                    .setDescription(
+                        "Selecione uma ação abaixo:\n\nHoje às " +
+                            new Date().toLocaleTimeString("pt-BR", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                            }),
+                    )
+                    .setColor(0x5865f2)
+                    .setTimestamp();
+
+                const settingsSelectMenu = new StringSelectMenuBuilder()
+                    .setCustomId("ticket_settings_menu")
+                    .setPlaceholder("Selecione uma ação abaixo:")
+                    .addOptions([
                     new StringSelectMenuOptionBuilder()
                         .setLabel("Notificar Usuário")
                         .setDescription(
@@ -2528,11 +2529,22 @@ client.on("interactionCreate", async (interaction) => {
                 settingsSelectMenu,
             );
 
-            return interaction.reply({
-                embeds: [settingsEmbed],
-                components: [settingsRow],
-                ephemeral: true,
-            });
+                return interaction.reply({
+                    embeds: [settingsEmbed],
+                    components: [settingsRow],
+                    ephemeral: true,
+                });
+            } catch (error) {
+                console.error("❌ Erro no menu de configurações:", error);
+                return interaction.reply({
+                    content:
+                        "❌ Erro ao abrir o menu de configurações! Detalhes: " +
+                        error.message,
+                    ephemeral: true,
+                }).catch(() => {
+                    console.error("Não foi possível responder à interação");
+                });
+            }
         }
 
         if (interaction.customId === "ticket_settings_menu") {
@@ -2787,6 +2799,11 @@ client.on("interactionCreate", async (interaction) => {
                             "❌ Erro ao atualizar o ticket. A mensagem de controle pode ter sido deletada.",
                     });
                 }
+            } else {
+                return await interaction.reply({
+                    content: "❌ Opção inválida selecionada!",
+                    ephemeral: true,
+                });
             }
         }
 
