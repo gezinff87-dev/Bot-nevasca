@@ -1938,7 +1938,7 @@ client.on('interactionCreate', async interaction => {
                         { name: '👮 Staff', value: 'Ninguém reivindicou esse ticket!', inline: false }
                     )
                     .setColor(0x5865F2)
-                    .setFooter({ text: 'Powered by 7M Store})
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 const closeButton = new ButtonBuilder()
