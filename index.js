@@ -699,55 +699,45 @@ client.on('interactionCreate', async interaction => {
 
             const custom = panelConfig.customization || {};
             
-            const defaultTitle = `**${panelConfig.name}**`;
-            const defaultDescription = '**Para que possamos iniciar o seu atendimento, selecione o setor desejado no menu abaixo.**\n\n' +
-                '**H͟o͟r͟á͟r͟i͟o͟ ͟d͟e͟ ͟A͟t͟e͟n͟d͟i͟m͟e͟n͟t͟o͟:**\n\n' +
-                '> Segunda a Sexta\n8:00h as 22:30h\n\n' +
-                '> Sábado e Domingo\n7:00h as 21:30h\n\n' +
-                '> **Caso envie mensagens fora do horário de atendimento, aguarde. Assim que um staff estiver disponível, irá lhe atender com o setor de atendimento selecionado. Por favor, evite menções e abrir ticket à toa sem precisar de suporte.**';
-            const defaultImage = "https://i.postimg.cc/RFbMNyv3/standard-9.gif";
-            const defaultFooter = 'Powered by 7M Store';
-
-            const embed = new EmbedBuilder()
-                .setColor(custom.color !== undefined ? custom.color : 0x0099FF)
-                .setTimestamp();
-
-            if (custom.title !== undefined && custom.title !== "") {
-                embed.setTitle(custom.title);
-            } else if (custom.title === undefined) {
-                embed.setTitle(defaultTitle);
-            }
-
-            if (custom.description !== undefined && custom.description !== "") {
-                embed.setDescription(custom.description);
-            } else if (custom.description === undefined) {
-                embed.setDescription(defaultDescription);
-            }
-
-            if (custom.image !== undefined && custom.image !== "") {
-                if (isValidUrl(custom.image)) {
-                    embed.setImage(custom.image);
-                }
-            } else if (custom.image === undefined && isValidUrl(defaultImage)) {
-                embed.setImage(defaultImage);
-            }
-
-            if (custom.thumbnail !== undefined && custom.thumbnail !== "" && isValidUrl(custom.thumbnail)) {
-                embed.setThumbnail(custom.thumbnail);
-            }
-
-            if (custom.footer !== undefined && custom.footer !== "") {
-                embed.setFooter({ text: custom.footer });
-            } else if (custom.footer === undefined) {
-                embed.setFooter({ text: defaultFooter });
-            }
-
+            let embed;
             const components = [];
 
             if (panelType === 'select_menu') {
+                const defaultSelectTitle = `🔔 ${panelConfig.name}`;
+                const defaultSelectDescription = 'Está precisando de ajuda ou quer denunciar algum problema?\nEscolha a opção abaixo e aguarde a equipe de suporte!';
+                const defaultSelectImage = "https://i.postimg.cc/RFbMNyv3/standard-9.gif";
+
+                embed = new EmbedBuilder()
+                    .setColor(custom.color !== undefined ? custom.color : 0xFF0000)
+                    .setTimestamp();
+
+                if (custom.title !== undefined && custom.title !== "") {
+                    embed.setTitle(custom.title);
+                } else if (custom.title === undefined) {
+                    embed.setTitle(defaultSelectTitle);
+                }
+
+                if (custom.description !== undefined && custom.description !== "") {
+                    embed.setDescription(custom.description);
+                } else if (custom.description === undefined) {
+                    embed.setDescription(defaultSelectDescription);
+                }
+
+                if (custom.image !== undefined && custom.image !== "") {
+                    if (isValidUrl(custom.image)) {
+                        embed.setImage(custom.image);
+                    }
+                } else if (custom.image === undefined && isValidUrl(defaultSelectImage)) {
+                    embed.setImage(defaultSelectImage);
+                }
+
+                if (custom.thumbnail !== undefined && custom.thumbnail !== "" && isValidUrl(custom.thumbnail)) {
+                    embed.setThumbnail(custom.thumbnail);
+                }
+
                 const selectMenu = new StringSelectMenuBuilder()
                     .setCustomId(`select_setor:${panelId}`)
-                    .setPlaceholder('Selecione uma opção para abrir ticket');
+                    .setPlaceholder('Selecione o ticket desejado');
 
                 panelConfig.setores.forEach(setor => {
                     const option = new StringSelectMenuOptionBuilder()
@@ -769,6 +759,49 @@ client.on('interactionCreate', async interaction => {
 
                 components.push(new ActionRowBuilder().addComponents(selectMenu));
             } else {
+                const defaultButtonTitle = `**${panelConfig.name}**`;
+                const defaultButtonDescription = '**Para que possamos iniciar o seu atendimento, selecione o setor desejado no menu abaixo.**\n\n' +
+                    '**H͟o͟r͟á͟r͟i͟o͟ ͟d͟e͟ ͟A͟t͟e͟n͟d͟i͟m͟e͟n͟t͟o͟:**\n\n' +
+                    '> Segunda a Sexta\n8:00h as 22:30h\n\n' +
+                    '> Sábado e Domingo\n7:00h as 21:30h\n\n' +
+                    '> **Caso envie mensagens fora do horário de atendimento, aguarde. Assim que um staff estiver disponível, irá lhe atender com o setor de atendimento selecionado. Por favor, evite menções e abrir ticket à toa sem precisar de suporte.**';
+                const defaultButtonImage = "https://i.postimg.cc/RFbMNyv3/standard-9.gif";
+                const defaultButtonFooter = 'Powered by 7M Store';
+
+                embed = new EmbedBuilder()
+                    .setColor(custom.color !== undefined ? custom.color : 0x0099FF)
+                    .setTimestamp();
+
+                if (custom.title !== undefined && custom.title !== "") {
+                    embed.setTitle(custom.title);
+                } else if (custom.title === undefined) {
+                    embed.setTitle(defaultButtonTitle);
+                }
+
+                if (custom.description !== undefined && custom.description !== "") {
+                    embed.setDescription(custom.description);
+                } else if (custom.description === undefined) {
+                    embed.setDescription(defaultButtonDescription);
+                }
+
+                if (custom.image !== undefined && custom.image !== "") {
+                    if (isValidUrl(custom.image)) {
+                        embed.setImage(custom.image);
+                    }
+                } else if (custom.image === undefined && isValidUrl(defaultButtonImage)) {
+                    embed.setImage(defaultButtonImage);
+                }
+
+                if (custom.thumbnail !== undefined && custom.thumbnail !== "" && isValidUrl(custom.thumbnail)) {
+                    embed.setThumbnail(custom.thumbnail);
+                }
+
+                if (custom.footer !== undefined && custom.footer !== "") {
+                    embed.setFooter({ text: custom.footer });
+                } else if (custom.footer === undefined) {
+                    embed.setFooter({ text: defaultButtonFooter });
+                }
+
                 const buttons = [];
                 panelConfig.customButtons.forEach(btn => {
                     const button = new ButtonBuilder()
@@ -1619,7 +1652,7 @@ client.on('interactionCreate', async interaction => {
                         { name: '👮 Staff', value: 'Ninguém reivindicou esse ticket!', inline: false }
                     )
                     .setColor(0x5865F2)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setFooter({ text: 'Mensagem de: DRAGON STORE' })
                     .setTimestamp();
 
                 const closeButton = new ButtonBuilder()
@@ -1769,8 +1802,9 @@ client.on('interactionCreate', async interaction => {
 
             const guildConfig = config[interaction.guildId];
             if (guildConfig?.panels) {
+                let logSent = false;
                 for (const panel of Object.values(guildConfig.panels)) {
-                    if (panel.logsChannelId) {
+                    if (panel.logsChannelId && !logSent) {
                         const logsChannel = interaction.guild.channels.cache.get(panel.logsChannelId);
                         if (logsChannel) {
                             const username = channel.name.replace('ticket-de-', '');
@@ -1790,6 +1824,7 @@ client.on('interactionCreate', async interaction => {
                             await logsChannel.send({ embeds: [logEmbed] }).catch(err => {
                                 console.error('❌ Erro ao enviar log de ticket fechado:', err);
                             });
+                            logSent = true;
                         }
                     }
                 }
@@ -1872,7 +1907,7 @@ client.on('interactionCreate', async interaction => {
             }
 
             await interaction.reply({ 
-                content: `🎫 Criando seu ticket...`, 
+                content: `🎫 Criando seu ticket no setor **${setorSelecionado}**...`, 
                 ephemeral: true 
             });
 
@@ -1938,7 +1973,7 @@ client.on('interactionCreate', async interaction => {
                         { name: '👮 Staff', value: 'Ninguém reivindicou esse ticket!', inline: false }
                     )
                     .setColor(0x5865F2)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setFooter({ text: 'Mensagem de: DRAGON STORE' })
                     .setTimestamp();
 
                 const closeButton = new ButtonBuilder()
