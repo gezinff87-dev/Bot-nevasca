@@ -1619,7 +1619,7 @@ client.on('interactionCreate', async interaction => {
                         { name: '👮 Staff', value: 'Ninguém reivindicou esse ticket!', inline: false }
                     )
                     .setColor(0x5865F2)
-                    .setFooter({ text: 'Mensagem de: DRAGON STORE' })
+                    .setFooter({ text: 'Powered by 7M Store' })
                     .setTimestamp();
 
                 const closeButton = new ButtonBuilder()
@@ -1872,7 +1872,7 @@ client.on('interactionCreate', async interaction => {
             }
 
             await interaction.reply({ 
-                content: `🎫 Criando seu ticket no setor **${setorSelecionado}**...`, 
+                content: `🎫 Criando seu ticket...`, 
                 ephemeral: true 
             });
 
