@@ -16,6 +16,7 @@ const CONFIG_FILE = path.join(__dirname, 'config.json');
 let config = {};
 
 const userPanelContext = new Map();
+const ticketClaimedBy = new Map();
 
 function loadConfig() {
     try {
@@ -1412,7 +1413,7 @@ client.on('interactionCreate', async interaction => {
                     `🎨 **Cor:** ${custom.color !== undefined ? `#${custom.color.toString(16).padStart(6, '0').toUpperCase()}` : 'Padrão (#0099FF)'}`,
                     `🖼️ **Imagem:** ${custom.image || 'Padrão'}`,
                     `🖼️ **Thumbnail:** ${custom.thumbnail || 'Nenhuma'}`,
-                    `📌 **Rodapé:** ${custom.footer || 'Padrão (Powered by STG Store)'}`
+                    `📌 **Rodapé:** ${custom.footer || 'Padrão (Powered by 7M Store)'}`
                 ].join('\n');
 
                 const embed = new EmbedBuilder()
@@ -1610,32 +1611,43 @@ client.on('interactionCreate', async interaction => {
                 });
 
                 const ticketEmbed = new EmbedBuilder()
-                    .setTitle('🎫 Ticket Aberto')
-                    .setDescription(`Olá ${interaction.user}, bem-vindo ao seu ticket!\n\n**Painel:** ${panelConfig.name}\n**Setor selecionado:** ${buttonLabel}\n\nUm membro da equipe de suporte irá atendê-lo em breve.\n\n**Para fechar ou reivindicar este ticket, clique nos botões abaixo.**`)
-                    .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setTitle('🎫 Ticket - Menu Inicial')
+                    .setDescription('Aguarde a chegada da equipe de suporte para dar continuidade ao atendimento. Enquanto isso, aproveite para nos fornecer mais detalhes sobre o que você precisa.')
+                    .addFields(
+                        { name: '👤 Usuário', value: `${interaction.user} 🎲`, inline: false },
+                        { name: '📄 Motivo', value: buttonLabel, inline: false },
+                        { name: '👮 Staff', value: 'Ninguém reivindicou esse ticket!', inline: false }
+                    )
+                    .setColor(0x5865F2)
+                    .setFooter({ text: 'Mensagem de: DRAGON STORE' })
                     .setTimestamp();
-
-                const claimButton = new ButtonBuilder()
-                    .setCustomId('reivindicar_ticket')
-                    .setLabel('Reivindicar Ticket')
-                    .setEmoji('✋')
-                    .setStyle(ButtonStyle.Success);
 
                 const closeButton = new ButtonBuilder()
                     .setCustomId('fechar_ticket')
-                    .setLabel('Fechar Ticket')
-                    .setEmoji('🔒')
+                    .setLabel('Fechar')
+                    .setEmoji('🗑️')
                     .setStyle(ButtonStyle.Danger);
 
-                const row = new ActionRowBuilder().addComponents(claimButton, closeButton);
+                const claimButton = new ButtonBuilder()
+                    .setCustomId('reivindicar_ticket')
+                    .setLabel('Reivindicar')
+                    .setEmoji('🙋')
+                    .setStyle(ButtonStyle.Secondary);
+
+                const archiveButton = new ButtonBuilder()
+                    .setCustomId('arquivar_ticket')
+                    .setLabel('Arquivar Ticket')
+                    .setEmoji('📁')
+                    .setStyle(ButtonStyle.Secondary);
+
+                const row = new ActionRowBuilder().addComponents(closeButton, claimButton, archiveButton);
 
                 const mentionRoles = panelConfig.supportRoles && panelConfig.supportRoles.length > 0
                     ? panelConfig.supportRoles.map(roleId => `<@&${roleId}>`).join(' ')
                     : (panelConfig.supportRoleId ? `<@&${panelConfig.supportRoleId}>` : '');
 
                 await ticketChannel.send({ 
-                    content: `${interaction.user}${mentionRoles ? ' | ' + mentionRoles : ''}`, 
+                    content: `${interaction.user}${mentionRoles ? ' ' + mentionRoles : ''}`, 
                     embeds: [ticketEmbed], 
                     components: [row] 
                 });
@@ -1700,6 +1712,29 @@ client.on('interactionCreate', async interaction => {
                 });
             }
 
+            ticketClaimedBy.set(channel.id, interaction.user.tag);
+
+            const messages = await channel.messages.fetch({ limit: 10 });
+            const ticketMessage = messages.find(msg => 
+                msg.author.id === client.user.id && 
+                msg.embeds.length > 0 && 
+                msg.embeds[0].title === '🎫 Ticket - Menu Inicial'
+            );
+
+            if (ticketMessage) {
+                const oldEmbed = ticketMessage.embeds[0];
+                const updatedEmbed = EmbedBuilder.from(oldEmbed);
+                
+                updatedEmbed.data.fields = oldEmbed.fields.map(field => {
+                    if (field.name === '👮 Staff') {
+                        return { ...field, value: `${interaction.user}` };
+                    }
+                    return field;
+                });
+
+                await ticketMessage.edit({ embeds: [updatedEmbed], components: ticketMessage.components });
+            }
+
             const claimEmbed = new EmbedBuilder()
                 .setTitle('✋ Ticket Reivindicado')
                 .setDescription(`Este ticket foi reivindicado por ${interaction.user}.\n\nEle será responsável pelo atendimento.`)
@@ -1749,7 +1784,7 @@ client.on('interactionCreate', async interaction => {
                                     `**Horário:** <t:${Math.floor(Date.now() / 1000)}:F>`
                                 )
                                 .setColor(0xFF0000)
-                                .setFooter({ text: '7M Store' })
+                                .setFooter({ text: 'Powered by 7M Store' })
                                 .setTimestamp();
                             
                             await logsChannel.send({ embeds: [logEmbed] }).catch(err => {
@@ -1765,6 +1800,47 @@ client.on('interactionCreate', async interaction => {
                     console.error('❌ Erro ao deletar canal:', err);
                 });
             }, 5000);
+        }
+
+        if (interaction.customId === 'arquivar_ticket') {
+            const channel = interaction.channel;
+
+            if (!channel.name.startsWith('ticket-de-')) {
+                return interaction.reply({ 
+                    content: '❌ Este comando só pode ser usado em canais de ticket!', 
+                    ephemeral: true 
+                });
+            }
+
+            const archiveEmbed = new EmbedBuilder()
+                .setTitle('📁 Ticket Arquivado')
+                .setDescription(`Ticket arquivado por ${interaction.user}.\n\nEste canal será arquivado.`)
+                .setColor(0x95A5A6)
+                .setFooter({ text: 'Powered by 7M Store' })
+                .setTimestamp();
+
+            await interaction.reply({ embeds: [archiveEmbed] });
+
+            try {
+                await channel.permissionOverwrites.edit(channel.guild.roles.everyone, {
+                    SendMessages: false
+                });
+
+                const messages = await channel.messages.fetch({ limit: 10 });
+                const ticketMessage = messages.find(msg => 
+                    msg.author.id === client.user.id && 
+                    msg.embeds.length > 0 && 
+                    msg.embeds[0].title === '🎫 Ticket - Menu Inicial'
+                );
+
+                if (ticketMessage) {
+                    await ticketMessage.edit({ components: [] });
+                }
+
+                console.log(`📁 Ticket arquivado: ${channel.name} por ${interaction.user.tag}`);
+            } catch (error) {
+                console.error('❌ Erro ao arquivar ticket:', error);
+            }
         }
     }
 
@@ -1854,32 +1930,43 @@ client.on('interactionCreate', async interaction => {
                 });
 
                 const ticketEmbed = new EmbedBuilder()
-                    .setTitle('🎫 Ticket Aberto')
-                    .setDescription(`Olá ${interaction.user}, bem-vindo ao seu ticket!\n\n**Painel:** ${panelConfig.name}\n**Setor selecionado:** ${setorSelecionado}\n\nUm membro da equipe de suporte irá atendê-lo em breve.\n\n**Para fechar ou reivindicar este ticket, clique nos botões abaixo.**`)
-                    .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setTitle('🎫 Ticket - Menu Inicial')
+                    .setDescription('Aguarde a chegada da equipe de suporte para dar continuidade ao atendimento. Enquanto isso, aproveite para nos fornecer mais detalhes sobre o que você precisa.')
+                    .addFields(
+                        { name: '👤 Usuário', value: `${interaction.user} 🎲`, inline: false },
+                        { name: '📄 Motivo', value: setorSelecionado, inline: false },
+                        { name: '👮 Staff', value: 'Ninguém reivindicou esse ticket!', inline: false }
+                    )
+                    .setColor(0x5865F2)
+                    .setFooter({ text: 'Mensagem de: DRAGON STORE' })
                     .setTimestamp();
-
-                const claimButton = new ButtonBuilder()
-                    .setCustomId('reivindicar_ticket')
-                    .setLabel('Reivindicar Ticket')
-                    .setEmoji('✋')
-                    .setStyle(ButtonStyle.Success);
 
                 const closeButton = new ButtonBuilder()
                     .setCustomId('fechar_ticket')
-                    .setLabel('Fechar Ticket')
-                    .setEmoji('🔒')
+                    .setLabel('Fechar')
+                    .setEmoji('🗑️')
                     .setStyle(ButtonStyle.Danger);
 
-                const row = new ActionRowBuilder().addComponents(claimButton, closeButton);
+                const claimButton = new ButtonBuilder()
+                    .setCustomId('reivindicar_ticket')
+                    .setLabel('Reivindicar')
+                    .setEmoji('🙋')
+                    .setStyle(ButtonStyle.Secondary);
+
+                const archiveButton = new ButtonBuilder()
+                    .setCustomId('arquivar_ticket')
+                    .setLabel('Arquivar Ticket')
+                    .setEmoji('📁')
+                    .setStyle(ButtonStyle.Secondary);
+
+                const row = new ActionRowBuilder().addComponents(closeButton, claimButton, archiveButton);
 
                 const mentionRoles = panelConfig.supportRoles && panelConfig.supportRoles.length > 0
                     ? panelConfig.supportRoles.map(roleId => `<@&${roleId}>`).join(' ')
                     : `<@&${panelConfig.supportRoleId}>`;
 
                 await ticketChannel.send({ 
-                    content: `${interaction.user} | ${mentionRoles}`,
+                    content: `${interaction.user} ${mentionRoles}`,
                     embeds: [ticketEmbed], 
                     components: [row] 
                 });
@@ -1960,7 +2047,7 @@ app.get('/', (req, res) => {
                     <div class="info">Bot Name: ${client.user ? client.user.tag : 'N/A'}</div>
                     <div class="info">Servers: ${client.guilds ? client.guilds.cache.size : '0'}</div>
                     <div class="info">Uptime: ${process.uptime().toFixed(0)}s</div>
-                    <p style="margin-top: 30px; color: #8b949e;">Powered by STG Store</p>
+                    <p style="margin-top: 30px; color: #8b949e;">Powered by 7M Store</p>
                 </div>
             </body>
         </html>
