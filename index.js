@@ -2629,12 +2629,13 @@ client.on("interactionCreate", async (interaction) => {
             }
 
             if (selectedAction === "notify_staff") {
+                await interaction.deferReply({ ephemeral: true });
+
                 const context = getTicketContext(interaction.channelId);
                 if (!context) {
-                    return interaction.reply({
+                    return interaction.editReply({
                         content:
                             "❌ Não foi possível recuperar as informações deste ticket!",
-                        ephemeral: true,
                     });
                 }
 
@@ -2643,9 +2644,8 @@ client.on("interactionCreate", async (interaction) => {
                     context.panelId,
                 );
                 if (!panelConfig) {
-                    return interaction.reply({
+                    return interaction.editReply({
                         content: "❌ Configuração do painel não encontrada!",
-                        ephemeral: true,
                     });
                 }
 
@@ -2664,15 +2664,13 @@ client.on("interactionCreate", async (interaction) => {
                         content: `🔔 **Notificação da equipe de suporte** ${mentionRoles}\n\nSolicitado por: ${interaction.user}`,
                     });
 
-                    await interaction.reply({
+                    await interaction.editReply({
                         content: "✅ Equipe de suporte notificada com sucesso!",
-                        ephemeral: true,
                     });
                 } else {
-                    await interaction.reply({
+                    await interaction.editReply({
                         content:
                             "❌ Nenhum cargo de suporte configurado para notificar!",
-                        ephemeral: true,
                     });
                 }
             }
