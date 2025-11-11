@@ -703,7 +703,8 @@ client.on('interactionCreate', async interaction => {
             const components = [];
 
             if (panelType === 'select_menu') {
-                const defaultSelectTitle = `🔔 ${panelConfig.name}`;
+                const defaultSelectAuthor = "Suporte";
+                const defaultSelectAuthorIcon = "https://i.postimg.cc/mkhf55vf/group-icon.png";
                 const defaultSelectDescription = 'Está precisando de ajuda ou quer denunciar algum problema?\nEscolha a opção abaixo e aguarde a equipe de suporte!';
                 const defaultSelectImage = "https://i.postimg.cc/RFbMNyv3/standard-9.gif";
 
@@ -712,9 +713,9 @@ client.on('interactionCreate', async interaction => {
                     .setTimestamp();
 
                 if (custom.title !== undefined && custom.title !== "") {
-                    embed.setTitle(custom.title);
-                } else if (custom.title === undefined) {
-                    embed.setTitle(defaultSelectTitle);
+                    embed.setAuthor({ name: custom.title, iconURL: defaultSelectAuthorIcon });
+                } else {
+                    embed.setAuthor({ name: defaultSelectAuthor, iconURL: defaultSelectAuthorIcon });
                 }
 
                 if (custom.description !== undefined && custom.description !== "") {
@@ -1585,10 +1586,7 @@ client.on('interactionCreate', async interaction => {
                 });
             }
 
-            await interaction.reply({ 
-                content: `🎫 Criando seu ticket: **${buttonLabel}**...`, 
-                ephemeral: true 
-            });
+            await interaction.deferReply({ ephemeral: true });
 
             try {
                 const permissionOverwrites = [
@@ -1683,6 +1681,19 @@ client.on('interactionCreate', async interaction => {
                     content: `${interaction.user}${mentionRoles ? ' ' + mentionRoles : ''}`, 
                     embeds: [ticketEmbed], 
                     components: [row] 
+                });
+
+                const goToTicketButton = new ButtonBuilder()
+                    .setLabel('Go to Ticket')
+                    .setEmoji('🔗')
+                    .setStyle(ButtonStyle.Link)
+                    .setURL(`https://discord.com/channels/${interaction.guildId}/${ticketChannel.id}`);
+
+                const buttonRow = new ActionRowBuilder().addComponents(goToTicketButton);
+
+                await interaction.editReply({
+                    content: '✅ Your ticket has been created!',
+                    components: [buttonRow]
                 });
 
                 console.log(`✅ Ticket criado: ${ticketChannelName} por ${interaction.user.tag} - Painel: ${panelConfig.name} - Botão: ${buttonLabel}`);
@@ -1906,10 +1917,7 @@ client.on('interactionCreate', async interaction => {
                 });
             }
 
-            await interaction.reply({ 
-                content: `🎫 Criando seu ticket no setor **${setorSelecionado}**...`, 
-                ephemeral: true 
-            });
+            await interaction.deferReply({ ephemeral: true });
 
             try {
                 const permissionOverwrites = [
@@ -2004,6 +2012,19 @@ client.on('interactionCreate', async interaction => {
                     content: `${interaction.user} ${mentionRoles}`,
                     embeds: [ticketEmbed], 
                     components: [row] 
+                });
+
+                const goToTicketButton = new ButtonBuilder()
+                    .setLabel('Go to Ticket')
+                    .setEmoji('🔗')
+                    .setStyle(ButtonStyle.Link)
+                    .setURL(`https://discord.com/channels/${interaction.guildId}/${ticketChannel.id}`);
+
+                const buttonRow = new ActionRowBuilder().addComponents(goToTicketButton);
+
+                await interaction.editReply({
+                    content: '✅ Your ticket has been created!',
+                    components: [buttonRow]
                 });
 
                 console.log(`✅ Ticket criado: ${ticketChannelName} por ${interaction.user.tag} - Painel: ${panelConfig.name} - Setor: ${setorSelecionado}`);
