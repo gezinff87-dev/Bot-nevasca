@@ -2136,11 +2136,16 @@ client.on("interactionCreate", async (interaction) => {
                           ? `<@&${panelConfig.supportRoleId}>`
                           : "";
 
-                await ticketChannel.send({
+                const controlMessage = await ticketChannel.send({
                     content: `${interaction.user}${mentionRoles ? " " + mentionRoles : ""}`,
                     embeds: [ticketEmbed],
                     components: [row],
                 });
+
+                const metadata = ticketMetadata.get(ticketChannel.id);
+                if (metadata) {
+                    metadata.controlMessageId = controlMessage.id;
+                }
 
                 const goToTicketButton = new ButtonBuilder()
                     .setLabel("Go to Ticket")
@@ -2231,17 +2236,32 @@ client.on("interactionCreate", async (interaction) => {
                 });
             }
 
-            ticketClaimedBy.set(channel.id, interaction.user.tag);
+            const context = getTicketContext(channel.id);
+            let ticketMessage = null;
 
-            const messages = await channel.messages.fetch({ limit: 10 });
-            const ticketMessage = messages.find(
-                (msg) =>
-                    msg.author.id === client.user.id &&
-                    msg.embeds.length > 0 &&
-                    msg.embeds[0].title === "🎫 Ticket - Menu Inicial",
-            );
+            try {
+                if (context && context.controlMessageId) {
+                    ticketMessage = await channel.messages.fetch(
+                        context.controlMessageId,
+                    );
+                } else {
+                    const messages = await channel.messages.fetch({ limit: 10 });
+                    ticketMessage = messages.find(
+                        (msg) =>
+                            msg.author.id === client.user.id &&
+                            msg.embeds.length > 0 &&
+                            msg.embeds[0].title === "🎫 Ticket - Menu Inicial",
+                    );
+                }
 
-            if (ticketMessage) {
+                if (!ticketMessage) {
+                    return interaction.reply({
+                        content:
+                            "❌ Não foi possível encontrar a mensagem de controle do ticket!",
+                        ephemeral: true,
+                    });
+                }
+
                 const oldEmbed = ticketMessage.embeds[0];
                 const updatedEmbed = EmbedBuilder.from(oldEmbed);
 
@@ -2255,6 +2275,15 @@ client.on("interactionCreate", async (interaction) => {
                 await ticketMessage.edit({
                     embeds: [updatedEmbed],
                     components: ticketMessage.components,
+                });
+
+                ticketClaimedBy.set(channel.id, interaction.user.tag);
+            } catch (error) {
+                console.error("Erro ao atualizar embed do ticket:", error);
+                return interaction.reply({
+                    content:
+                        "❌ Não foi possível atualizar o ticket. A mensagem de controle pode ter sido deletada.",
+                    ephemeral: true,
                 });
             }
 
@@ -2377,16 +2406,19 @@ client.on("interactionCreate", async (interaction) => {
                     },
                 );
 
-                const messages = await channel.messages.fetch({ limit: 10 });
-                const ticketMessage = messages.find(
-                    (msg) =>
-                        msg.author.id === client.user.id &&
-                        msg.embeds.length > 0 &&
-                        msg.embeds[0].title === "🎫 Ticket - Menu Inicial",
-                );
-
-                if (ticketMessage) {
-                    await ticketMessage.edit({ components: [] });
+                const context = getTicketContext(channel.id);
+                if (context && context.controlMessageId) {
+                    try {
+                        const ticketMessage = await channel.messages.fetch(
+                            context.controlMessageId,
+                        );
+                        await ticketMessage.edit({ components: [] });
+                    } catch (msgError) {
+                        console.error(
+                            "⚠️ Não foi possível remover botões da mensagem de controle:",
+                            msgError,
+                        );
+                    }
                 }
 
                 console.log(
@@ -2485,6 +2517,11 @@ client.on("interactionCreate", async (interaction) => {
                         .setDescription("Notificar a equipe de suporte")
                         .setValue("notify_staff")
                         .setEmoji("🔔"),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel("Desistir do Ticket")
+                        .setDescription("Desistir de atender este ticket")
+                        .setValue("unclaim_ticket")
+                        .setEmoji("🚫"),
                 ]);
 
             const settingsRow = new ActionRowBuilder().addComponents(
@@ -2519,10 +2556,8 @@ client.on("interactionCreate", async (interaction) => {
                 const row = new ActionRowBuilder().addComponents(messageInput);
                 modal.addComponents(row);
 
-                await interaction.showModal(modal);
-            }
-
-            if (selectedAction === "add_user") {
+                return await interaction.showModal(modal);
+            } else if (selectedAction === "add_user") {
                 await interaction.deferReply({ ephemeral: true });
 
                 try {
@@ -2540,7 +2575,6 @@ client.on("interactionCreate", async (interaction) => {
                         return interaction.editReply({
                             content:
                                 "❌ Nenhum usuário disponível para adicionar!",
-                            ephemeral: true,
                         });
                     }
 
@@ -2561,21 +2595,17 @@ client.on("interactionCreate", async (interaction) => {
                         .setColor(0x00ff00)
                         .setTimestamp();
 
-                    await interaction.editReply({
+                    return await interaction.editReply({
                         embeds: [embed],
                         components: [userRow],
-                        ephemeral: true,
                     });
                 } catch (error) {
                     console.error("Erro ao buscar membros:", error);
-                    await interaction.editReply({
+                    return await interaction.editReply({
                         content: "❌ Erro ao buscar membros do servidor!",
-                        ephemeral: true,
                     });
                 }
-            }
-
-            if (selectedAction === "remove_user") {
+            } else if (selectedAction === "remove_user") {
                 await interaction.deferReply({ ephemeral: true });
 
                 try {
@@ -2593,7 +2623,6 @@ client.on("interactionCreate", async (interaction) => {
                         return interaction.editReply({
                             content:
                                 "❌ Nenhum usuário disponível para remover!",
-                            ephemeral: true,
                         });
                     }
 
@@ -2614,21 +2643,17 @@ client.on("interactionCreate", async (interaction) => {
                         .setColor(0xff0000)
                         .setTimestamp();
 
-                    await interaction.editReply({
+                    return await interaction.editReply({
                         embeds: [embed],
                         components: [userRow],
-                        ephemeral: true,
                     });
                 } catch (error) {
                     console.error("Erro ao buscar membros:", error);
-                    await interaction.editReply({
+                    return await interaction.editReply({
                         content: "❌ Erro ao buscar membros do servidor!",
-                        ephemeral: true,
                     });
                 }
-            }
-
-            if (selectedAction === "notify_staff") {
+            } else if (selectedAction === "notify_staff") {
                 await interaction.deferReply({ ephemeral: true });
 
                 const context = getTicketContext(interaction.channelId);
@@ -2664,13 +2689,102 @@ client.on("interactionCreate", async (interaction) => {
                         content: `🔔 **Notificação da equipe de suporte** ${mentionRoles}\n\nSolicitado por: ${interaction.user}`,
                     });
 
-                    await interaction.editReply({
+                    return await interaction.editReply({
                         content: "✅ Equipe de suporte notificada com sucesso!",
                     });
                 } else {
-                    await interaction.editReply({
+                    return await interaction.editReply({
                         content:
                             "❌ Nenhum cargo de suporte configurado para notificar!",
+                    });
+                }
+            } else if (selectedAction === "unclaim_ticket") {
+                await interaction.deferReply({ ephemeral: true });
+
+                const channel = interaction.channel;
+
+                if (!channel.name.startsWith("ticket-de-")) {
+                    return interaction.editReply({
+                        content:
+                            "❌ Este comando só pode ser usado em canais de ticket!",
+                    });
+                }
+
+                const currentClaimant = ticketClaimedBy.get(channel.id);
+                if (!currentClaimant) {
+                    return interaction.editReply({
+                        content:
+                            "❌ Este ticket não foi reivindicado por ninguém!",
+                    });
+                }
+
+                if (currentClaimant !== interaction.user.tag) {
+                    return interaction.editReply({
+                        content: `❌ Você não pode desistir deste ticket! Ele foi reivindicado por **${currentClaimant}**.`,
+                    });
+                }
+
+                const context = getTicketContext(channel.id);
+                let ticketMessage = null;
+
+                try {
+                    if (context && context.controlMessageId) {
+                        ticketMessage = await channel.messages.fetch(
+                            context.controlMessageId,
+                        );
+                    } else {
+                        const messages = await channel.messages.fetch({
+                            limit: 10,
+                        });
+                        ticketMessage = messages.find(
+                            (msg) =>
+                                msg.author.id === client.user.id &&
+                                msg.embeds.length > 0 &&
+                                msg.embeds[0].title ===
+                                    "🎫 Ticket - Menu Inicial",
+                        );
+                    }
+
+                    if (!ticketMessage) {
+                        return await interaction.editReply({
+                            content:
+                                "❌ Não foi possível encontrar a mensagem de controle do ticket!",
+                        });
+                    }
+
+                    const oldEmbed = ticketMessage.embeds[0];
+                    const updatedEmbed = EmbedBuilder.from(oldEmbed);
+
+                    updatedEmbed.data.fields = oldEmbed.fields.map((field) => {
+                        if (field.name === "👮 Staff") {
+                            return {
+                                ...field,
+                                value: "Ninguém reivindicou esse ticket!",
+                            };
+                        }
+                        return field;
+                    });
+
+                    await ticketMessage.edit({
+                        embeds: [updatedEmbed],
+                        components: ticketMessage.components,
+                    });
+
+                    ticketClaimedBy.delete(channel.id);
+
+                    await interaction.channel.send({
+                        content: `🚫 ${interaction.user} desistiu de atender este ticket.\n\nO ticket está disponível para ser reivindicado por outro membro da equipe.`,
+                    });
+
+                    return await interaction.editReply({
+                        content:
+                            "✅ Você desistiu deste ticket com sucesso! Outro membro da equipe pode reivindicá-lo agora.",
+                    });
+                } catch (error) {
+                    console.error("Erro ao desistir do ticket:", error);
+                    return await interaction.editReply({
+                        content:
+                            "❌ Erro ao atualizar o ticket. A mensagem de controle pode ter sido deletada.",
                     });
                 }
             }
@@ -2876,11 +2990,16 @@ client.on("interactionCreate", async (interaction) => {
                               .join(" ")
                         : `<@&${panelConfig.supportRoleId}>`;
 
-                await ticketChannel.send({
+                const controlMessage = await ticketChannel.send({
                     content: `${interaction.user} ${mentionRoles}`,
                     embeds: [ticketEmbed],
                     components: [row],
                 });
+
+                const metadata = ticketMetadata.get(ticketChannel.id);
+                if (metadata) {
+                    metadata.controlMessageId = controlMessage.id;
+                }
 
                 const goToTicketButton = new ButtonBuilder()
                     .setLabel("Go to Ticket")
