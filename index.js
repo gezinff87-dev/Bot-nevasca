@@ -1,18 +1,34 @@
-require('dotenv').config();
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, PermissionFlagsBits, ChannelType, REST, Routes, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const express = require('express');
-const fs = require('fs');
-const path = require('path');
+require("dotenv").config();
+const {
+    Client,
+    GatewayIntentBits,
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    StringSelectMenuBuilder,
+    StringSelectMenuOptionBuilder,
+    PermissionFlagsBits,
+    ChannelType,
+    REST,
+    Routes,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
+} = require("discord.js");
+const express = require("express");
+const fs = require("fs");
+const path = require("path");
 
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
+        GatewayIntentBits.MessageContent,
+    ],
 });
 
-const CONFIG_FILE = path.join(__dirname, 'config.json');
+const CONFIG_FILE = path.join(__dirname, "config.json");
 let config = {};
 
 const userPanelContext = new Map();
@@ -22,66 +38,68 @@ const ticketMetadata = new Map();
 function loadConfig() {
     try {
         if (fs.existsSync(CONFIG_FILE)) {
-            const data = fs.readFileSync(CONFIG_FILE, 'utf-8');
+            const data = fs.readFileSync(CONFIG_FILE, "utf-8");
             config = JSON.parse(data);
-            
-            Object.keys(config).forEach(guildId => {
+
+            Object.keys(config).forEach((guildId) => {
                 if (!config[guildId].panels) {
-                    console.log(`🔄 Migrando configuração antiga para ${guildId}...`);
+                    console.log(
+                        `🔄 Migrando configuração antiga para ${guildId}...`,
+                    );
                     const oldConfig = { ...config[guildId] };
                     config[guildId] = {
                         panels: {
-                            'default': {
-                                name: 'Painel Padrão',
-                                ...oldConfig
-                            }
-                        }
+                            default: {
+                                name: "Painel Padrão",
+                                ...oldConfig,
+                            },
+                        },
                     };
                 }
             });
-            
-            console.log('✅ Configurações carregadas com sucesso!');
+
+            console.log("✅ Configurações carregadas com sucesso!");
         } else {
             config = {};
             saveConfig();
-            console.log('📝 Arquivo config.json criado.');
+            console.log("📝 Arquivo config.json criado.");
         }
     } catch (error) {
-        console.error('❌ Erro ao carregar config.json:', error);
+        console.error("❌ Erro ao carregar config.json:", error);
         config = {};
     }
 }
 
 function saveConfig() {
     try {
-        fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 4), 'utf-8');
+        fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 4), "utf-8");
     } catch (error) {
-        console.error('❌ Erro ao salvar config.json:', error);
+        console.error("❌ Erro ao salvar config.json:", error);
     }
 }
 
 function sanitizeUsername(username) {
     return username
         .toLowerCase()
-        .replace(/[^a-z0-9]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
+        .replace(/[^a-z0-9]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "")
         .substring(0, 40);
 }
 
 function sanitizePanelId(name) {
     return name
         .toLowerCase()
-        .replace(/[^a-z0-9]/g, '_')
-        .replace(/_+/g, '_')
-        .replace(/^_|_$/g, '')
+        .replace(/[^a-z0-9]/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_|_$/g, "")
         .substring(0, 32);
 }
 
 function isValidUrl(string) {
     try {
         const url = new URL(string);
-        return url.protocol === 'http:' || url.protocol === 'https:';
+        return url.protocol === "http:" || url.protocol === "https:";
     } catch (_) {
         return false;
     }
@@ -89,82 +107,97 @@ function isValidUrl(string) {
 
 function isValidEmoji(emoji) {
     if (!emoji) return true;
-    
+
     const customEmojiRegex = /<a?:\w+:\d+>/;
     if (customEmojiRegex.test(emoji)) {
         return true;
     }
-    
-    const emojiRegex = /^[\p{Emoji}\p{Emoji_Presentation}\p{Emoji_Modifier_Base}\p{Emoji_Modifier}\p{Emoji_Component}]+$/u;
+
+    const emojiRegex =
+        /^[\p{Emoji}\p{Emoji_Presentation}\p{Emoji_Modifier_Base}\p{Emoji_Modifier}\p{Emoji_Component}]+$/u;
     if (emojiRegex.test(emoji)) {
         return true;
     }
-    
+
     return false;
 }
 
 function parseEmoji(emoji) {
     if (!emoji) return null;
-    
+
     const customEmojiRegex = /<(a)?:(\w+):(\d+)>/;
     const match = emoji.match(customEmojiRegex);
-    
+
     if (match) {
         return {
             id: match[3],
             name: match[2],
-            animated: !!match[1]
+            animated: !!match[1],
         };
     }
-    
+
     return emoji;
 }
 
 function validateButtonLabel(label) {
     if (!label || label.trim().length === 0) {
-        return { valid: false, error: 'O label não pode estar vazio!' };
+        return { valid: false, error: "O label não pode estar vazio!" };
     }
     if (label.length > 80) {
-        return { valid: false, error: 'O label do botão não pode ter mais de 80 caracteres!' };
+        return {
+            valid: false,
+            error: "O label do botão não pode ter mais de 80 caracteres!",
+        };
     }
     return { valid: true };
 }
 
 function validateCustomId(customId) {
     if (!customId || customId.trim().length === 0) {
-        return { valid: false, error: 'O ID personalizado não pode estar vazio!' };
+        return {
+            valid: false,
+            error: "O ID personalizado não pode estar vazio!",
+        };
     }
     if (customId.length > 100) {
-        return { valid: false, error: 'O ID personalizado não pode ter mais de 100 caracteres!' };
+        return {
+            valid: false,
+            error: "O ID personalizado não pode ter mais de 100 caracteres!",
+        };
     }
     return { valid: true };
 }
 
 function buildTicketControls() {
     const closeButton = new ButtonBuilder()
-        .setCustomId('fechar_ticket')
-        .setLabel('Fechar')
-        .setEmoji('🗑️')
+        .setCustomId("fechar_ticket")
+        .setLabel("Fechar")
+        .setEmoji("🗑️")
         .setStyle(ButtonStyle.Danger);
 
     const claimButton = new ButtonBuilder()
-        .setCustomId('reivindicar_ticket')
-        .setLabel('Reivindicar')
-        .setEmoji('🙋')
+        .setCustomId("reivindicar_ticket")
+        .setLabel("Reivindicar")
+        .setEmoji("🙋")
         .setStyle(ButtonStyle.Secondary);
 
     const archiveButton = new ButtonBuilder()
-        .setCustomId('arquivar_ticket')
-        .setLabel('Arquivar Ticket')
-        .setEmoji('📁')
+        .setCustomId("arquivar_ticket")
+        .setLabel("Arquivar Ticket")
+        .setEmoji("📁")
         .setStyle(ButtonStyle.Secondary);
 
     const settingsButton = new ButtonBuilder()
-        .setCustomId('ticket_settings')
-        .setEmoji('⚙️')
+        .setCustomId("ticket_settings")
+        .setEmoji("⚙️")
         .setStyle(ButtonStyle.Secondary);
 
-    return new ActionRowBuilder().addComponents(closeButton, claimButton, archiveButton, settingsButton);
+    return new ActionRowBuilder().addComponents(
+        closeButton,
+        claimButton,
+        archiveButton,
+        settingsButton,
+    );
 }
 
 function getTicketContext(channelId) {
@@ -173,25 +206,40 @@ function getTicketContext(channelId) {
 
 function validateSelectMenuOption(label, value, description) {
     if (!label || label.trim().length === 0) {
-        return { valid: false, error: 'O nome do setor não pode estar vazio!' };
+        return { valid: false, error: "O nome do setor não pode estar vazio!" };
     }
     if (!value || value.trim().length === 0) {
-        return { valid: false, error: 'O valor do setor não pode estar vazio!' };
+        return {
+            valid: false,
+            error: "O valor do setor não pode estar vazio!",
+        };
     }
     if (!description || description.trim().length === 0) {
-        return { valid: false, error: 'A descrição do setor não pode estar vazia!' };
+        return {
+            valid: false,
+            error: "A descrição do setor não pode estar vazia!",
+        };
     }
-    
+
     if (label.length > 100) {
-        return { valid: false, error: 'O nome do setor não pode ter mais de 100 caracteres!' };
+        return {
+            valid: false,
+            error: "O nome do setor não pode ter mais de 100 caracteres!",
+        };
     }
     if (value.length > 100) {
-        return { valid: false, error: 'O valor do setor não pode ter mais de 100 caracteres!' };
+        return {
+            valid: false,
+            error: "O valor do setor não pode ter mais de 100 caracteres!",
+        };
     }
     if (description.length > 100) {
-        return { valid: false, error: 'A descrição do setor não pode ter mais de 100 caracteres!' };
+        return {
+            valid: false,
+            error: "A descrição do setor não pode ter mais de 100 caracteres!",
+        };
     }
-    
+
     return { valid: true };
 }
 
@@ -219,390 +267,412 @@ function getPanelConfig(guildId, panelId) {
 }
 
 function checkEnvironmentVariables() {
-    const requiredVars = ['TOKEN', 'CLIENT_ID'];
-    const missing = requiredVars.filter(varName => !process.env[varName]);
-    
+    const requiredVars = ["TOKEN", "CLIENT_ID"];
+    const missing = requiredVars.filter((varName) => !process.env[varName]);
+
     if (missing.length > 0) {
-        console.error('❌ ERRO: Variáveis de ambiente ausentes!');
-        console.error(`   Faltam: ${missing.join(', ')}`);
-        console.error('   Por favor, crie um arquivo .env com TOKEN e CLIENT_ID');
+        console.error("❌ ERRO: Variáveis de ambiente ausentes!");
+        console.error(`   Faltam: ${missing.join(", ")}`);
+        console.error(
+            "   Por favor, crie um arquivo .env com TOKEN e CLIENT_ID",
+        );
         return false;
     }
-    
+
     return true;
 }
 
 const commands = [
     {
-        name: 'criar_painel',
-        description: 'Cria um novo painel de tickets',
+        name: "criar_painel",
+        description: "Cria um novo painel de tickets",
         options: [
             {
-                name: 'nome',
-                description: 'Nome do painel (ex: Suporte, Vendas, VIP)',
+                name: "nome",
+                description: "Nome do painel (ex: Suporte, Vendas, VIP)",
                 type: 3,
-                required: true
+                required: true,
             },
             {
-                name: 'tipo',
-                description: 'Tipo de interface do painel',
+                name: "tipo",
+                description: "Tipo de interface do painel",
                 type: 3,
                 required: false,
                 choices: [
-                    { name: 'Select Menu (Menu Dropdown)', value: 'select_menu' },
-                    { name: 'Botões', value: 'buttons' }
-                ]
-            }
-        ]
+                    {
+                        name: "Select Menu (Menu Dropdown)",
+                        value: "select_menu",
+                    },
+                    { name: "Botões", value: "buttons" },
+                ],
+            },
+        ],
     },
     {
-        name: 'listar_paineis',
-        description: 'Lista todos os painéis de tickets configurados'
+        name: "listar_paineis",
+        description: "Lista todos os painéis de tickets configurados",
     },
     {
-        name: 'selecionar_painel',
-        description: 'Seleciona qual painel deseja editar',
+        name: "selecionar_painel",
+        description: "Seleciona qual painel deseja editar",
         options: [
             {
-                name: 'painel',
-                description: 'ID do painel a selecionar',
+                name: "painel",
+                description: "ID do painel a selecionar",
                 type: 3,
-                required: true
-            }
-        ]
+                required: true,
+            },
+        ],
     },
     {
-        name: 'enviar_painel',
-        description: 'Envia um painel de tickets no canal atual',
+        name: "enviar_painel",
+        description: "Envia um painel de tickets no canal atual",
         options: [
             {
-                name: 'painel',
-                description: 'ID do painel a enviar',
+                name: "painel",
+                description: "ID do painel a enviar",
                 type: 3,
-                required: true
-            }
-        ]
+                required: true,
+            },
+        ],
     },
     {
-        name: 'deletar_painel',
-        description: 'Deleta um painel de tickets',
+        name: "deletar_painel",
+        description: "Deleta um painel de tickets",
         options: [
             {
-                name: 'painel',
-                description: 'ID do painel a deletar',
+                name: "painel",
+                description: "ID do painel a deletar",
                 type: 3,
-                required: true
-            }
-        ]
+                required: true,
+            },
+        ],
     },
     {
-        name: 'setup',
-        description: 'Configura o painel selecionado (cargo de suporte e categoria)',
+        name: "setup",
+        description:
+            "Configura o painel selecionado (cargo de suporte e categoria)",
         options: [
             {
-                name: 'cargo',
-                description: 'Cargo que terá acesso aos tickets',
+                name: "cargo",
+                description: "Cargo que terá acesso aos tickets",
                 type: 8,
-                required: true
+                required: true,
             },
             {
-                name: 'categoria',
-                description: 'Categoria onde os tickets serão criados',
+                name: "categoria",
+                description: "Categoria onde os tickets serão criados",
                 type: 7,
                 required: true,
-                channel_types: [ChannelType.GuildCategory]
-            }
-        ]
+                channel_types: [ChannelType.GuildCategory],
+            },
+        ],
     },
     {
-        name: 'adduser',
-        description: 'Adiciona um usuário ao ticket atual',
+        name: "adduser",
+        description: "Adiciona um usuário ao ticket atual",
         options: [
             {
-                name: 'usuario',
-                description: 'Usuário a ser adicionado ao ticket',
+                name: "usuario",
+                description: "Usuário a ser adicionado ao ticket",
                 type: 6,
-                required: true
-            }
-        ]
+                required: true,
+            },
+        ],
     },
     {
-        name: 'remove_user',
-        description: 'Remove um usuário do ticket atual',
+        name: "remove_user",
+        description: "Remove um usuário do ticket atual",
         options: [
             {
-                name: 'usuario',
-                description: 'Usuário a ser removido do ticket',
+                name: "usuario",
+                description: "Usuário a ser removido do ticket",
                 type: 6,
-                required: true
-            }
-        ]
+                required: true,
+            },
+        ],
     },
     {
-        name: 'logs',
-        description: 'Configura o canal de logs do painel selecionado',
+        name: "logs",
+        description: "Configura o canal de logs do painel selecionado",
         options: [
             {
-                name: 'canal',
-                description: 'Canal onde os logs serão enviados',
+                name: "canal",
+                description: "Canal onde os logs serão enviados",
                 type: 7,
                 required: true,
-                channel_types: [ChannelType.GuildText]
-            }
-        ]
+                channel_types: [ChannelType.GuildText],
+            },
+        ],
     },
     {
-        name: 'add_cargo',
-        description: 'Adiciona um cargo de suporte ao painel selecionado',
+        name: "add_cargo",
+        description: "Adiciona um cargo de suporte ao painel selecionado",
         options: [
             {
-                name: 'cargo',
-                description: 'Cargo que terá acesso aos tickets',
+                name: "cargo",
+                description: "Cargo que terá acesso aos tickets",
                 type: 8,
-                required: true
-            }
-        ]
+                required: true,
+            },
+        ],
     },
     {
-        name: 'remove_cargo',
-        description: 'Remove um cargo de suporte do painel selecionado',
+        name: "remove_cargo",
+        description: "Remove um cargo de suporte do painel selecionado",
         options: [
             {
-                name: 'cargo',
-                description: 'Cargo a ser removido',
+                name: "cargo",
+                description: "Cargo a ser removido",
                 type: 8,
-                required: true
-            }
-        ]
+                required: true,
+            },
+        ],
     },
     {
-        name: 'list_cargos',
-        description: 'Lista todos os cargos de suporte do painel selecionado'
+        name: "list_cargos",
+        description: "Lista todos os cargos de suporte do painel selecionado",
     },
     {
-        name: 'add_button',
-        description: 'Adiciona um botão personalizado ao painel selecionado',
+        name: "add_button",
+        description: "Adiciona um botão personalizado ao painel selecionado",
         options: [
             {
-                name: 'label',
-                description: 'Texto que aparece no botão',
+                name: "label",
+                description: "Texto que aparece no botão",
                 type: 3,
-                required: true
+                required: true,
             },
             {
-                name: 'emoji',
-                description: 'Emoji do botão (ex: 🎫 ou <:nome:id>)',
+                name: "emoji",
+                description: "Emoji do botão (ex: 🎫 ou <:nome:id>)",
                 type: 3,
-                required: false
+                required: false,
             },
             {
-                name: 'cor',
-                description: 'Cor do botão',
+                name: "cor",
+                description: "Cor do botão",
                 type: 3,
                 required: false,
                 choices: [
-                    { name: 'Azul', value: 'Primary' },
-                    { name: 'Cinza', value: 'Secondary' },
-                    { name: 'Verde', value: 'Success' },
-                    { name: 'Vermelho', value: 'Danger' }
-                ]
-            }
-        ]
+                    { name: "Azul", value: "Primary" },
+                    { name: "Cinza", value: "Secondary" },
+                    { name: "Verde", value: "Success" },
+                    { name: "Vermelho", value: "Danger" },
+                ],
+            },
+        ],
     },
     {
-        name: 'remove_button',
-        description: 'Remove um botão do painel selecionado',
+        name: "remove_button",
+        description: "Remove um botão do painel selecionado",
         options: [
             {
-                name: 'label',
-                description: 'Label do botão a ser removido',
+                name: "label",
+                description: "Label do botão a ser removido",
                 type: 3,
-                required: true
-            }
-        ]
+                required: true,
+            },
+        ],
     },
     {
-        name: 'list_buttons',
-        description: 'Lista todos os botões do painel selecionado'
+        name: "list_buttons",
+        description: "Lista todos os botões do painel selecionado",
     },
     {
-        name: 'add_setor',
-        description: 'Adiciona um setor ao painel selecionado',
+        name: "add_setor",
+        description: "Adiciona um setor ao painel selecionado",
         options: [
             {
-                name: 'nome',
-                description: 'Nome do setor (ex: Suporte, Vendas, Financeiro)',
+                name: "nome",
+                description: "Nome do setor (ex: Suporte, Vendas, Financeiro)",
                 type: 3,
-                required: true
+                required: true,
             },
             {
-                name: 'descricao',
-                description: 'Descrição do setor',
+                name: "descricao",
+                description: "Descrição do setor",
                 type: 3,
-                required: true
+                required: true,
             },
             {
-                name: 'emoji',
-                description: 'Emoji do setor',
+                name: "emoji",
+                description: "Emoji do setor",
                 type: 3,
-                required: false
-            }
-        ]
+                required: false,
+            },
+        ],
     },
     {
-        name: 'remove_setor',
-        description: 'Remove um setor do painel selecionado',
+        name: "remove_setor",
+        description: "Remove um setor do painel selecionado",
         options: [
             {
-                name: 'nome',
-                description: 'Nome do setor a ser removido',
+                name: "nome",
+                description: "Nome do setor a ser removido",
                 type: 3,
-                required: true
-            }
-        ]
+                required: true,
+            },
+        ],
     },
     {
-        name: 'list_setores',
-        description: 'Lista todos os setores do painel selecionado'
+        name: "list_setores",
+        description: "Lista todos os setores do painel selecionado",
     },
     {
-        name: 'edit_titulo',
-        description: 'Edita o título do painel selecionado (deixe vazio para remover)',
+        name: "edit_titulo",
+        description:
+            "Edita o título do painel selecionado (deixe vazio para remover)",
         options: [
             {
-                name: 'titulo',
-                description: 'Novo título do painel (deixe vazio para remover)',
+                name: "titulo",
+                description: "Novo título do painel (deixe vazio para remover)",
                 type: 3,
-                required: false
-            }
-        ]
+                required: false,
+            },
+        ],
     },
     {
-        name: 'edit_descricao',
-        description: 'Edita a descrição do painel selecionado (deixe vazio para remover)',
+        name: "edit_descricao",
+        description:
+            "Edita a descrição do painel selecionado (deixe vazio para remover)",
         options: [
             {
-                name: 'descricao',
-                description: 'Nova descrição do painel (deixe vazio para remover)',
+                name: "descricao",
+                description:
+                    "Nova descrição do painel (deixe vazio para remover)",
                 type: 3,
-                required: false
-            }
-        ]
+                required: false,
+            },
+        ],
     },
     {
-        name: 'edit_imagem',
-        description: 'Edita a imagem (banner) do painel selecionado',
+        name: "edit_imagem",
+        description: "Edita a imagem (banner) do painel selecionado",
         options: [
             {
-                name: 'url',
-                description: 'URL da imagem (deixe vazio para remover)',
+                name: "url",
+                description: "URL da imagem (deixe vazio para remover)",
                 type: 3,
-                required: false
-            }
-        ]
+                required: false,
+            },
+        ],
     },
     {
-        name: 'edit_thumbnail',
-        description: 'Edita a thumbnail (miniatura) do painel selecionado',
+        name: "edit_thumbnail",
+        description: "Edita a thumbnail (miniatura) do painel selecionado",
         options: [
             {
-                name: 'url',
-                description: 'URL da thumbnail (deixe vazio para remover)',
+                name: "url",
+                description: "URL da thumbnail (deixe vazio para remover)",
                 type: 3,
-                required: false
-            }
-        ]
+                required: false,
+            },
+        ],
     },
     {
-        name: 'edit_footer',
-        description: 'Edita o rodapé do painel selecionado',
+        name: "edit_footer",
+        description: "Edita o rodapé do painel selecionado",
         options: [
             {
-                name: 'texto',
-                description: 'Texto do rodapé (deixe vazio para remover)',
+                name: "texto",
+                description: "Texto do rodapé (deixe vazio para remover)",
                 type: 3,
-                required: false
-            }
-        ]
+                required: false,
+            },
+        ],
     },
     {
-        name: 'edit_color',
-        description: 'Edita a cor da borda do embed do painel selecionado',
+        name: "edit_color",
+        description: "Edita a cor da borda do embed do painel selecionado",
         options: [
             {
-                name: 'cor',
-                description: 'Cor em hexadecimal (ex: #0099FF) ou nome de cor',
+                name: "cor",
+                description: "Cor em hexadecimal (ex: #0099FF) ou nome de cor",
                 type: 3,
-                required: true
-            }
-        ]
+                required: true,
+            },
+        ],
     },
     {
-        name: 'ver_personalizacao',
-        description: 'Visualiza as configurações de personalização do painel selecionado'
+        name: "ver_personalizacao",
+        description:
+            "Visualiza as configurações de personalização do painel selecionado",
     },
     {
-        name: 'set_tipo_painel',
-        description: 'Define o tipo de interface do painel (select menu ou botões)',
+        name: "set_tipo_painel",
+        description:
+            "Define o tipo de interface do painel (select menu ou botões)",
         options: [
             {
-                name: 'tipo',
-                description: 'Tipo de interface',
+                name: "tipo",
+                description: "Tipo de interface",
                 type: 3,
                 required: true,
                 choices: [
-                    { name: 'Select Menu (Menu Dropdown)', value: 'select_menu' },
-                    { name: 'Botões', value: 'buttons' }
-                ]
-            }
-        ]
-    }
+                    {
+                        name: "Select Menu (Menu Dropdown)",
+                        value: "select_menu",
+                    },
+                    { name: "Botões", value: "buttons" },
+                ],
+            },
+        ],
+    },
 ];
 
 async function registerCommands() {
-    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
-    
+    const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
+
     try {
-        console.log('🔄 Registrando comandos slash...');
-        
-        await rest.put(
-            Routes.applicationCommands(process.env.CLIENT_ID),
-            { body: commands }
-        );
-        
-        console.log('✅ Comandos registrados com sucesso!');
+        console.log("🔄 Registrando comandos slash...");
+
+        await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), {
+            body: commands,
+        });
+
+        console.log("✅ Comandos registrados com sucesso!");
     } catch (error) {
-        console.error('❌ Erro ao registrar comandos:', error);
+        console.error("❌ Erro ao registrar comandos:", error);
     }
 }
 
-client.once('ready', () => {
+client.once("ready", () => {
     console.log(`🤖 Bot online como ${client.user.tag}`);
     console.log(`📊 Servidores: ${client.guilds.cache.size}`);
-    
+
     loadConfig();
     registerCommands();
-    
-    client.user.setActivity('tickets | /criar_painel', { type: 3 });
-    
-    setInterval(() => {
-        console.log(`⏰ [${new Date().toLocaleString('pt-BR')}] Bot ativo - ${client.guilds.cache.size} servidores`);
-    }, 5 * 60 * 1000);
+
+    client.user.setActivity("tickets | /criar_painel", { type: 3 });
+
+    setInterval(
+        () => {
+            console.log(
+                `⏰ [${new Date().toLocaleString("pt-BR")}] Bot ativo - ${client.guilds.cache.size} servidores`,
+            );
+        },
+        5 * 60 * 1000,
+    );
 });
 
-client.on('interactionCreate', async interaction => {
+client.on("interactionCreate", async (interaction) => {
     if (interaction.isChatInputCommand()) {
-        
-        if (interaction.commandName === 'criar_painel') {
-            if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                return interaction.reply({ 
-                    content: '❌ Você precisa ser um administrador para usar este comando!', 
-                    ephemeral: true 
+        if (interaction.commandName === "criar_painel") {
+            if (
+                !interaction.member.permissions.has(
+                    PermissionFlagsBits.Administrator,
+                )
+            ) {
+                return interaction.reply({
+                    content:
+                        "❌ Você precisa ser um administrador para usar este comando!",
+                    ephemeral: true,
                 });
             }
 
-            const nome = interaction.options.getString('nome');
-            const tipo = interaction.options.getString('tipo') || 'select_menu';
+            const nome = interaction.options.getString("nome");
+            const tipo = interaction.options.getString("tipo") || "select_menu";
             const panelId = sanitizePanelId(nome);
 
             if (!config[interaction.guildId]) {
@@ -613,9 +683,9 @@ client.on('interactionCreate', async interaction => {
             }
 
             if (config[interaction.guildId].panels[panelId]) {
-                return interaction.reply({ 
-                    content: '❌ Já existe um painel com esse nome!', 
-                    ephemeral: true 
+                return interaction.reply({
+                    content: "❌ Já existe um painel com esse nome!",
+                    ephemeral: true,
                 });
             }
 
@@ -624,59 +694,78 @@ client.on('interactionCreate', async interaction => {
                 type: tipo,
                 setores: [],
                 customButtons: [],
-                supportRoles: []
+                supportRoles: [],
             };
             saveConfig();
 
             setSelectedPanel(interaction.user.id, interaction.guildId, panelId);
 
-            const tipoTexto = tipo === 'select_menu' ? 'Select Menu (Dropdown)' : 'Botões';
+            const tipoTexto =
+                tipo === "select_menu" ? "Select Menu (Dropdown)" : "Botões";
             const embed = new EmbedBuilder()
-                .setTitle('✅ Painel Criado!')
-                .setDescription(`**Painel de tickets criado com sucesso!**\n\n📋 **Nome:** ${nome}\n🆔 **ID:** \`${panelId}\`\n🎛️ **Tipo:** ${tipoTexto}\n\n✨ Este painel foi automaticamente selecionado. Use \`/setup\` para configurá-lo.`)
-                .setColor(0x00FF00)
-                .setFooter({ text: 'Powered by 7M Store' })
+                .setTitle("✅ Painel Criado!")
+                .setDescription(
+                    `**Painel de tickets criado com sucesso!**\n\n📋 **Nome:** ${nome}\n🆔 **ID:** \`${panelId}\`\n🎛️ **Tipo:** ${tipoTexto}\n\n✨ Este painel foi automaticamente selecionado. Use \`/setup\` para configurá-lo.`,
+                )
+                .setColor(0x00ff00)
+                .setFooter({ text: "Powered by 7M Store" })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
-        if (interaction.commandName === 'listar_paineis') {
+        if (interaction.commandName === "listar_paineis") {
             const guildConfig = config[interaction.guildId];
-            
-            if (!guildConfig?.panels || Object.keys(guildConfig.panels).length === 0) {
-                return interaction.reply({ 
-                    content: '❌ Nenhum painel configurado ainda! Use `/criar_painel` para criar um.', 
-                    ephemeral: true 
+
+            if (
+                !guildConfig?.panels ||
+                Object.keys(guildConfig.panels).length === 0
+            ) {
+                return interaction.reply({
+                    content:
+                        "❌ Nenhum painel configurado ainda! Use `/criar_painel` para criar um.",
+                    ephemeral: true,
                 });
             }
 
-            const selectedPanelId = getSelectedPanel(interaction.user.id, interaction.guildId);
-            
-            const paineis = Object.entries(guildConfig.panels).map(([id, panel]) => {
-                const isSelected = id === selectedPanelId ? '✅ ' : '';
-                const setoresCount = panel.setores?.length || 0;
-                const configured = panel.categoryId && panel.supportRoleId ? '✓' : '⚠️';
-                return `${isSelected}**${panel.name}** ${configured}\n└ ID: \`${id}\` | Setores: ${setoresCount}`;
-            }).join('\n\n');
+            const selectedPanelId = getSelectedPanel(
+                interaction.user.id,
+                interaction.guildId,
+            );
+
+            const paineis = Object.entries(guildConfig.panels)
+                .map(([id, panel]) => {
+                    const isSelected = id === selectedPanelId ? "✅ " : "";
+                    const setoresCount = panel.setores?.length || 0;
+                    const configured =
+                        panel.categoryId && panel.supportRoleId ? "✓" : "⚠️";
+                    return `${isSelected}**${panel.name}** ${configured}\n└ ID: \`${id}\` | Setores: ${setoresCount}`;
+                })
+                .join("\n\n");
 
             const embed = new EmbedBuilder()
-                .setTitle('📋 Painéis de Tickets Configurados')
-                .setDescription(paineis + '\n\n✅ = Selecionado | ✓ = Configurado | ⚠️ = Não configurado')
-                .setColor(0x0099FF)
-                .setFooter({ text: 'Use /selecionar_painel para escolher um painel' })
+                .setTitle("📋 Painéis de Tickets Configurados")
+                .setDescription(
+                    paineis +
+                        "\n\n✅ = Selecionado | ✓ = Configurado | ⚠️ = Não configurado",
+                )
+                .setColor(0x0099ff)
+                .setFooter({
+                    text: "Use /selecionar_painel para escolher um painel",
+                })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
-        if (interaction.commandName === 'selecionar_painel') {
-            const panelId = interaction.options.getString('painel');
-            
+        if (interaction.commandName === "selecionar_painel") {
+            const panelId = interaction.options.getString("painel");
+
             if (!config[interaction.guildId]?.panels?.[panelId]) {
-                return interaction.reply({ 
-                    content: '❌ Painel não encontrado! Use `/listar_paineis` para ver os disponíveis.', 
-                    ephemeral: true 
+                return interaction.reply({
+                    content:
+                        "❌ Painel não encontrado! Use `/listar_paineis` para ver os disponíveis.",
+                    ephemeral: true,
                 });
             }
 
@@ -684,208 +773,261 @@ client.on('interactionCreate', async interaction => {
             const panel = config[interaction.guildId].panels[panelId];
 
             const embed = new EmbedBuilder()
-                .setTitle('✅ Painel Selecionado!')
-                .setDescription(`Você agora está editando: **${panel.name}**\n\nTodos os comandos de configuração serão aplicados a este painel.`)
-                .setColor(0x00FF00)
-                .setFooter({ text: 'Powered by 7M Store' })
+                .setTitle("✅ Painel Selecionado!")
+                .setDescription(
+                    `Você agora está editando: **${panel.name}**\n\nTodos os comandos de configuração serão aplicados a este painel.`,
+                )
+                .setColor(0x00ff00)
+                .setFooter({ text: "Powered by 7M Store" })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
-        if (interaction.commandName === 'enviar_painel') {
-            if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-                return interaction.reply({ 
-                    content: '❌ Você não tem permissão para usar este comando!', 
-                    ephemeral: true 
+        if (interaction.commandName === "enviar_painel") {
+            if (
+                !interaction.member.permissions.has(
+                    PermissionFlagsBits.ManageChannels,
+                )
+            ) {
+                return interaction.reply({
+                    content:
+                        "❌ Você não tem permissão para usar este comando!",
+                    ephemeral: true,
                 });
             }
 
-            const panelId = interaction.options.getString('painel');
+            const panelId = interaction.options.getString("painel");
             const panelConfig = getPanelConfig(interaction.guildId, panelId);
-            
+
             if (!panelConfig) {
-                return interaction.reply({ 
-                    content: '❌ Painel não encontrado!', 
-                    ephemeral: true 
+                return interaction.reply({
+                    content: "❌ Painel não encontrado!",
+                    ephemeral: true,
                 });
             }
 
-            const panelType = panelConfig.type || 'select_menu';
-            
-            if (panelType === 'select_menu') {
+            const panelType = panelConfig.type || "select_menu";
+
+            if (panelType === "select_menu") {
                 if (!panelConfig.setores || panelConfig.setores.length === 0) {
-                    return interaction.reply({ 
-                        content: '❌ Este painel não tem setores configurados! Use `/selecionar_painel` e depois `/add_setor`.', 
-                        ephemeral: true 
+                    return interaction.reply({
+                        content:
+                            "❌ Este painel não tem setores configurados! Use `/selecionar_painel` e depois `/add_setor`.",
+                        ephemeral: true,
                     });
                 }
-            } else if (panelType === 'buttons') {
-                if (!panelConfig.customButtons || panelConfig.customButtons.length === 0) {
-                    return interaction.reply({ 
-                        content: '❌ Este painel não tem botões configurados! Use `/selecionar_painel` e depois `/add_button`.', 
-                        ephemeral: true 
+            } else if (panelType === "buttons") {
+                if (
+                    !panelConfig.customButtons ||
+                    panelConfig.customButtons.length === 0
+                ) {
+                    return interaction.reply({
+                        content:
+                            "❌ Este painel não tem botões configurados! Use `/selecionar_painel` e depois `/add_button`.",
+                        ephemeral: true,
                     });
                 }
             }
 
             const custom = panelConfig.customization || {};
-            
+
             let embed;
             const components = [];
 
-            if (panelType === 'select_menu') {
+            if (panelType === "select_menu") {
                 const defaultSelectAuthor = "Suporte";
-                const defaultSelectAuthorIcon = "https://i.postimg.cc/mkhf55vf/group-icon.png";
-                const defaultSelectDescription = 'Está precisando de ajuda ou quer denunciar algum problema?\nEscolha a opção abaixo e aguarde a equipe de suporte!';
-                const defaultSelectImage = "https://i.postimg.cc/RFbMNyv3/standard-9.gif";
+                const defaultSelectAuthorIcon =
+                    "https://i.postimg.cc/mkhf55vf/group-icon.png";
+                const defaultSelectDescription =
+                    "Está precisando de ajuda ou quer denunciar algum problema?\nEscolha a opção abaixo e aguarde a equipe de suporte!";
+                const defaultSelectImage =
+                    "https://i.postimg.cc/RFbMNyv3/standard-9.gif";
 
                 embed = new EmbedBuilder()
-                    .setColor(custom.color !== undefined ? custom.color : 0xFF0000)
+                    .setColor(
+                        custom.color !== undefined ? custom.color : 0xff0000,
+                    )
                     .setTimestamp();
 
-                if (custom.title !== undefined && custom.title !== null && custom.title.trim() !== "") {
-                    embed.setAuthor({ name: custom.title, iconURL: defaultSelectAuthorIcon });
-                } else if (custom.title === undefined) {
-                    embed.setAuthor({ name: defaultSelectAuthor, iconURL: defaultSelectAuthorIcon });
+                const titleValue =
+                    custom.title !== undefined
+                        ? (custom.title || "").trim()
+                        : defaultSelectAuthor;
+                if (titleValue) {
+                    embed.setAuthor({
+                        name: titleValue,
+                        iconURL: defaultSelectAuthorIcon,
+                    });
                 }
 
-                if (custom.description !== undefined && custom.description !== null && custom.description.trim() !== "") {
-                    embed.setDescription(custom.description);
-                } else if (custom.description === undefined) {
-                    embed.setDescription(defaultSelectDescription);
+                const descValue =
+                    custom.description !== undefined
+                        ? (custom.description || "").trim()
+                        : defaultSelectDescription;
+                if (descValue) {
+                    embed.setDescription(descValue);
                 }
 
-                if (custom.image !== undefined && custom.image !== null && custom.image.trim() !== "") {
-                    if (isValidUrl(custom.image)) {
-                        embed.setImage(custom.image);
-                    }
-                } else if (custom.image === undefined && isValidUrl(defaultSelectImage)) {
-                    embed.setImage(defaultSelectImage);
+                const imageValue =
+                    custom.image !== undefined
+                        ? (custom.image || "").trim()
+                        : defaultSelectImage;
+                if (imageValue && isValidUrl(imageValue)) {
+                    embed.setImage(imageValue);
                 }
 
-                if (custom.thumbnail !== undefined && custom.thumbnail !== null && custom.thumbnail.trim() !== "" && isValidUrl(custom.thumbnail)) {
-                    embed.setThumbnail(custom.thumbnail);
+                const thumbnailValue = custom.thumbnail
+                    ? custom.thumbnail.trim()
+                    : "";
+                if (thumbnailValue && isValidUrl(thumbnailValue)) {
+                    embed.setThumbnail(thumbnailValue);
                 }
 
                 const selectMenu = new StringSelectMenuBuilder()
                     .setCustomId(`select_setor:${panelId}`)
-                    .setPlaceholder('Selecione o ticket desejado');
+                    .setPlaceholder("Selecione o ticket desejado");
 
-                panelConfig.setores.forEach(setor => {
+                panelConfig.setores.forEach((setor) => {
                     const option = new StringSelectMenuOptionBuilder()
                         .setLabel(setor.nome)
                         .setDescription(setor.descricao)
                         .setValue(setor.nome);
-                    
+
                     if (setor.emoji && isValidEmoji(setor.emoji)) {
                         const parsedEmoji = parseEmoji(setor.emoji);
-                        if (typeof parsedEmoji === 'string') {
+                        if (typeof parsedEmoji === "string") {
                             option.setEmoji(parsedEmoji);
                         } else if (parsedEmoji && parsedEmoji.id) {
                             option.setEmoji(parsedEmoji);
                         }
                     }
-                    
+
                     selectMenu.addOptions(option);
                 });
 
-                components.push(new ActionRowBuilder().addComponents(selectMenu));
+                components.push(
+                    new ActionRowBuilder().addComponents(selectMenu),
+                );
             } else {
                 const defaultButtonTitle = `**${panelConfig.name}**`;
-                const defaultButtonDescription = '**Para que possamos iniciar o seu atendimento, selecione o setor desejado no menu abaixo.**\n\n' +
-                    '**H͟o͟r͟á͟r͟i͟o͟ ͟d͟e͟ ͟A͟t͟e͟n͟d͟i͟m͟e͟n͟t͟o͟:**\n\n' +
-                    '> Segunda a Sexta\n8:00h as 22:30h\n\n' +
-                    '> Sábado e Domingo\n7:00h as 21:30h\n\n' +
-                    '> **Caso envie mensagens fora do horário de atendimento, aguarde. Assim que um staff estiver disponível, irá lhe atender com o setor de atendimento selecionado. Por favor, evite menções e abrir ticket à toa sem precisar de suporte.**';
-                const defaultButtonImage = "https://i.postimg.cc/RFbMNyv3/standard-9.gif";
-                const defaultButtonFooter = 'Powered by 7M Store';
+                const defaultButtonDescription =
+                    "**Para que possamos iniciar o seu atendimento, selecione o setor desejado no menu abaixo.**\n\n" +
+                    "**H͟o͟r͟á͟r͟i͟o͟ ͟d͟e͟ ͟A͟t͟e͟n͟d͟i͟m͟e͟n͟t͟o͟:**\n\n" +
+                    "> Segunda a Sexta\n8:00h as 22:30h\n\n" +
+                    "> Sábado e Domingo\n7:00h as 21:30h\n\n" +
+                    "> **Caso envie mensagens fora do horário de atendimento, aguarde. Assim que um staff estiver disponível, irá lhe atender com o setor de atendimento selecionado. Por favor, evite menções e abrir ticket à toa sem precisar de suporte.**";
+                const defaultButtonImage =
+                    "https://i.postimg.cc/RFbMNyv3/standard-9.gif";
+                const defaultButtonFooter = "Powered by 7M Store";
 
                 embed = new EmbedBuilder()
-                    .setColor(custom.color !== undefined ? custom.color : 0x0099FF)
+                    .setColor(
+                        custom.color !== undefined ? custom.color : 0x0099ff,
+                    )
                     .setTimestamp();
 
-                if (custom.title !== undefined && custom.title !== null && custom.title.trim() !== "") {
-                    embed.setTitle(custom.title);
-                } else if (custom.title === undefined) {
-                    embed.setTitle(defaultButtonTitle);
+                const titleValue =
+                    custom.title !== undefined
+                        ? (custom.title || "").trim()
+                        : defaultButtonTitle;
+                if (titleValue) {
+                    embed.setTitle(titleValue);
                 }
 
-                if (custom.description !== undefined && custom.description !== null && custom.description.trim() !== "") {
-                    embed.setDescription(custom.description);
-                } else if (custom.description === undefined) {
-                    embed.setDescription(defaultButtonDescription);
+                const descValue =
+                    custom.description !== undefined
+                        ? (custom.description || "").trim()
+                        : defaultButtonDescription;
+                if (descValue) {
+                    embed.setDescription(descValue);
                 }
 
-                if (custom.image !== undefined && custom.image !== null && custom.image.trim() !== "") {
-                    if (isValidUrl(custom.image)) {
-                        embed.setImage(custom.image);
-                    }
-                } else if (custom.image === undefined && isValidUrl(defaultButtonImage)) {
-                    embed.setImage(defaultButtonImage);
+                const imageValue =
+                    custom.image !== undefined
+                        ? (custom.image || "").trim()
+                        : defaultButtonImage;
+                if (imageValue && isValidUrl(imageValue)) {
+                    embed.setImage(imageValue);
                 }
 
-                if (custom.thumbnail !== undefined && custom.thumbnail !== null && custom.thumbnail.trim() !== "" && isValidUrl(custom.thumbnail)) {
-                    embed.setThumbnail(custom.thumbnail);
+                const thumbnailValue = custom.thumbnail
+                    ? custom.thumbnail.trim()
+                    : "";
+                if (thumbnailValue && isValidUrl(thumbnailValue)) {
+                    embed.setThumbnail(thumbnailValue);
                 }
 
-                if (custom.footer !== undefined && custom.footer !== null && custom.footer.trim() !== "") {
-                    embed.setFooter({ text: custom.footer });
-                } else if (custom.footer === undefined) {
-                    embed.setFooter({ text: defaultButtonFooter });
+                const footerValue =
+                    custom.footer !== undefined
+                        ? (custom.footer || "").trim()
+                        : defaultButtonFooter;
+                if (footerValue) {
+                    embed.setFooter({ text: footerValue });
                 }
 
                 const buttons = [];
-                panelConfig.customButtons.forEach(btn => {
+                panelConfig.customButtons.forEach((btn) => {
                     const button = new ButtonBuilder()
                         .setCustomId(createSafeCustomId(panelId, btn.label))
                         .setLabel(btn.label)
-                        .setStyle(ButtonStyle[btn.style] || ButtonStyle.Primary);
-                    
+                        .setStyle(
+                            ButtonStyle[btn.style] || ButtonStyle.Primary,
+                        );
+
                     if (btn.emoji && isValidEmoji(btn.emoji)) {
                         const parsedEmoji = parseEmoji(btn.emoji);
-                        if (typeof parsedEmoji === 'string') {
+                        if (typeof parsedEmoji === "string") {
                             button.setEmoji(parsedEmoji);
                         } else if (parsedEmoji && parsedEmoji.id) {
                             button.setEmoji(parsedEmoji);
                         }
                     }
-                    
+
                     buttons.push(button);
                 });
 
                 for (let i = 0; i < buttons.length; i += 5) {
-                    const row = new ActionRowBuilder().addComponents(buttons.slice(i, i + 5));
+                    const row = new ActionRowBuilder().addComponents(
+                        buttons.slice(i, i + 5),
+                    );
                     components.push(row);
                 }
             }
 
             try {
                 await interaction.channel.send({ embeds: [embed], components });
-                return interaction.reply({ content: '✅ Painel de tickets enviado!', ephemeral: true });
+                return interaction.reply({
+                    content: "✅ Painel de tickets enviado!",
+                    ephemeral: true,
+                });
             } catch (error) {
-                console.error('❌ Erro ao enviar painel:', error);
-                return interaction.reply({ 
-                    content: `❌ Erro ao enviar painel: ${error.message}`, 
-                    ephemeral: true 
+                console.error("❌ Erro ao enviar painel:", error);
+                return interaction.reply({
+                    content: `❌ Erro ao enviar painel: ${error.message}`,
+                    ephemeral: true,
                 });
             }
         }
 
-        if (interaction.commandName === 'deletar_painel') {
-            if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                return interaction.reply({ 
-                    content: '❌ Você precisa ser um administrador!', 
-                    ephemeral: true 
+        if (interaction.commandName === "deletar_painel") {
+            if (
+                !interaction.member.permissions.has(
+                    PermissionFlagsBits.Administrator,
+                )
+            ) {
+                return interaction.reply({
+                    content: "❌ Você precisa ser um administrador!",
+                    ephemeral: true,
                 });
             }
 
-            const panelId = interaction.options.getString('painel');
-            
+            const panelId = interaction.options.getString("painel");
+
             if (!config[interaction.guildId]?.panels?.[panelId]) {
-                return interaction.reply({ 
-                    content: '❌ Painel não encontrado!', 
-                    ephemeral: true 
+                return interaction.reply({
+                    content: "❌ Painel não encontrado!",
+                    ephemeral: true,
                 });
             }
 
@@ -900,51 +1042,77 @@ client.on('interactionCreate', async interaction => {
             });
 
             const embed = new EmbedBuilder()
-                .setTitle('🗑️ Painel Deletado!')
+                .setTitle("🗑️ Painel Deletado!")
                 .setDescription(`O painel **${panelName}** foi removido.`)
-                .setColor(0xFF6B6B)
-                .setFooter({ text: 'Powered by 7M Store' })
+                .setColor(0xff6b6b)
+                .setFooter({ text: "Powered by 7M Store" })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
         const commandsRequiringPanel = [
-            'setup', 'logs', 'add_cargo', 'remove_cargo', 'list_cargos',
-            'add_button', 'remove_button', 'list_buttons',
-            'add_setor', 'remove_setor', 'list_setores',
-            'edit_titulo', 'edit_descricao', 'edit_imagem', 'edit_thumbnail', 
-            'edit_footer', 'edit_color', 'ver_personalizacao', 'set_tipo_painel'
+            "setup",
+            "logs",
+            "add_cargo",
+            "remove_cargo",
+            "list_cargos",
+            "add_button",
+            "remove_button",
+            "list_buttons",
+            "add_setor",
+            "remove_setor",
+            "list_setores",
+            "edit_titulo",
+            "edit_descricao",
+            "edit_imagem",
+            "edit_thumbnail",
+            "edit_footer",
+            "edit_color",
+            "ver_personalizacao",
+            "set_tipo_painel",
         ];
 
         if (commandsRequiringPanel.includes(interaction.commandName)) {
-            const selectedPanelId = getSelectedPanel(interaction.user.id, interaction.guildId);
-            
+            const selectedPanelId = getSelectedPanel(
+                interaction.user.id,
+                interaction.guildId,
+            );
+
             if (!selectedPanelId) {
-                return interaction.reply({ 
-                    content: '❌ Você precisa selecionar um painel primeiro! Use `/selecionar_painel` ou `/criar_painel`.', 
-                    ephemeral: true 
+                return interaction.reply({
+                    content:
+                        "❌ Você precisa selecionar um painel primeiro! Use `/selecionar_painel` ou `/criar_painel`.",
+                    ephemeral: true,
                 });
             }
 
-            const panelConfig = getPanelConfig(interaction.guildId, selectedPanelId);
+            const panelConfig = getPanelConfig(
+                interaction.guildId,
+                selectedPanelId,
+            );
             if (!panelConfig) {
-                return interaction.reply({ 
-                    content: '❌ O painel selecionado não existe mais! Use `/selecionar_painel`.', 
-                    ephemeral: true 
+                return interaction.reply({
+                    content:
+                        "❌ O painel selecionado não existe mais! Use `/selecionar_painel`.",
+                    ephemeral: true,
                 });
             }
 
-            if (interaction.commandName === 'setup') {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                    return interaction.reply({ 
-                        content: '❌ Você precisa ser um administrador!', 
-                        ephemeral: true 
+            if (interaction.commandName === "setup") {
+                if (
+                    !interaction.member.permissions.has(
+                        PermissionFlagsBits.Administrator,
+                    )
+                ) {
+                    return interaction.reply({
+                        content: "❌ Você precisa ser um administrador!",
+                        ephemeral: true,
                     });
                 }
 
-                const cargo = interaction.options.getRole('cargo');
-                const categoria = interaction.options.getChannel('categoria');
+                const cargo = interaction.options.getRole("cargo");
+                const categoria = interaction.options.getChannel("categoria");
 
                 panelConfig.supportRoleId = cargo.id;
                 panelConfig.categoryId = categoria.id;
@@ -956,145 +1124,201 @@ client.on('interactionCreate', async interaction => {
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle('✅ Configuração Concluída!')
-                    .setDescription(`**Painel "${panelConfig.name}" configurado com sucesso!**\n\n📌 **Cargo de Suporte:** ${cargo}\n📁 **Categoria:** ${categoria.name}`)
-                    .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setTitle("✅ Configuração Concluída!")
+                    .setDescription(
+                        `**Painel "${panelConfig.name}" configurado com sucesso!**\n\n📌 **Cargo de Suporte:** ${cargo}\n📁 **Categoria:** ${categoria.name}`,
+                    )
+                    .setColor(0x00ff00)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            if (interaction.commandName === 'logs') {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                    return interaction.reply({ 
-                        content: '❌ Você precisa ser um administrador!', 
-                        ephemeral: true 
+            if (interaction.commandName === "logs") {
+                if (
+                    !interaction.member.permissions.has(
+                        PermissionFlagsBits.Administrator,
+                    )
+                ) {
+                    return interaction.reply({
+                        content: "❌ Você precisa ser um administrador!",
+                        ephemeral: true,
                     });
                 }
 
-                const canal = interaction.options.getChannel('canal');
+                const canal = interaction.options.getChannel("canal");
                 panelConfig.logsChannelId = canal.id;
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle('✅ Canal de Logs Configurado!')
-                    .setDescription(`**Canal de logs do painel "${panelConfig.name}" configurado!**\n\n📋 **Canal de Logs:** ${canal}`)
-                    .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setTitle("✅ Canal de Logs Configurado!")
+                    .setDescription(
+                        `**Canal de logs do painel "${panelConfig.name}" configurado!**\n\n📋 **Canal de Logs:** ${canal}`,
+                    )
+                    .setColor(0x00ff00)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            if (interaction.commandName === 'add_cargo') {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                    return interaction.reply({ content: '❌ Você precisa ser um administrador!', ephemeral: true });
+            if (interaction.commandName === "add_cargo") {
+                if (
+                    !interaction.member.permissions.has(
+                        PermissionFlagsBits.Administrator,
+                    )
+                ) {
+                    return interaction.reply({
+                        content: "❌ Você precisa ser um administrador!",
+                        ephemeral: true,
+                    });
                 }
 
-                const cargo = interaction.options.getRole('cargo');
-                
+                const cargo = interaction.options.getRole("cargo");
+
                 if (!panelConfig.supportRoles) {
                     panelConfig.supportRoles = [];
                 }
 
                 if (panelConfig.supportRoles.includes(cargo.id)) {
-                    return interaction.reply({ content: '❌ Este cargo já está configurado!', ephemeral: true });
+                    return interaction.reply({
+                        content: "❌ Este cargo já está configurado!",
+                        ephemeral: true,
+                    });
                 }
 
                 panelConfig.supportRoles.push(cargo.id);
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle('✅ Cargo Adicionado!')
-                    .setDescription(`**Cargo adicionado ao painel "${panelConfig.name}"!**\n\n📌 **Cargo:** ${cargo}`)
-                    .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setTitle("✅ Cargo Adicionado!")
+                    .setDescription(
+                        `**Cargo adicionado ao painel "${panelConfig.name}"!**\n\n📌 **Cargo:** ${cargo}`,
+                    )
+                    .setColor(0x00ff00)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            if (interaction.commandName === 'remove_cargo') {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                    return interaction.reply({ content: '❌ Você precisa ser um administrador!', ephemeral: true });
+            if (interaction.commandName === "remove_cargo") {
+                if (
+                    !interaction.member.permissions.has(
+                        PermissionFlagsBits.Administrator,
+                    )
+                ) {
+                    return interaction.reply({
+                        content: "❌ Você precisa ser um administrador!",
+                        ephemeral: true,
+                    });
                 }
 
-                const cargo = interaction.options.getRole('cargo');
-                
+                const cargo = interaction.options.getRole("cargo");
+
                 if (!panelConfig.supportRoles) {
-                    return interaction.reply({ content: '❌ Nenhum cargo configurado ainda!', ephemeral: true });
+                    return interaction.reply({
+                        content: "❌ Nenhum cargo configurado ainda!",
+                        ephemeral: true,
+                    });
                 }
 
                 const index = panelConfig.supportRoles.indexOf(cargo.id);
                 if (index === -1) {
-                    return interaction.reply({ content: '❌ Este cargo não está na lista!', ephemeral: true });
+                    return interaction.reply({
+                        content: "❌ Este cargo não está na lista!",
+                        ephemeral: true,
+                    });
                 }
 
                 panelConfig.supportRoles.splice(index, 1);
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle('🗑️ Cargo Removido!')
-                    .setDescription(`**Cargo removido do painel "${panelConfig.name}"!**\n\n📌 **Cargo:** ${cargo}`)
-                    .setColor(0xFF6B6B)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setTitle("🗑️ Cargo Removido!")
+                    .setDescription(
+                        `**Cargo removido do painel "${panelConfig.name}"!**\n\n📌 **Cargo:** ${cargo}`,
+                    )
+                    .setColor(0xff6b6b)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            if (interaction.commandName === 'list_cargos') {
-                if (!panelConfig.supportRoles || panelConfig.supportRoles.length === 0) {
-                    return interaction.reply({ content: '❌ Nenhum cargo de suporte configurado!', ephemeral: true });
+            if (interaction.commandName === "list_cargos") {
+                if (
+                    !panelConfig.supportRoles ||
+                    panelConfig.supportRoles.length === 0
+                ) {
+                    return interaction.reply({
+                        content: "❌ Nenhum cargo de suporte configurado!",
+                        ephemeral: true,
+                    });
                 }
 
-                const cargos = panelConfig.supportRoles.map(roleId => {
-                    const role = interaction.guild.roles.cache.get(roleId);
-                    return role ? `• ${role}` : `• ID: ${roleId} (cargo não encontrado)`;
-                }).join('\n');
+                const cargos = panelConfig.supportRoles
+                    .map((roleId) => {
+                        const role = interaction.guild.roles.cache.get(roleId);
+                        return role
+                            ? `• ${role}`
+                            : `• ID: ${roleId} (cargo não encontrado)`;
+                    })
+                    .join("\n");
 
                 const embed = new EmbedBuilder()
                     .setTitle(`📋 Cargos - ${panelConfig.name}`)
                     .setDescription(cargos)
-                    .setColor(0x0099FF)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setColor(0x0099ff)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            if (interaction.commandName === 'add_button') {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                    return interaction.reply({ content: '❌ Você precisa ser um administrador!', ephemeral: true });
-                }
-
-                const label = interaction.options.getString('label');
-                const emoji = interaction.options.getString('emoji');
-                const cor = interaction.options.getString('cor') || 'Primary';
-
-                const labelValidation = validateButtonLabel(label);
-                if (!labelValidation.valid) {
-                    return interaction.reply({ 
-                        content: `❌ ${labelValidation.error}`, 
-                        ephemeral: true 
+            if (interaction.commandName === "add_button") {
+                if (
+                    !interaction.member.permissions.has(
+                        PermissionFlagsBits.Administrator,
+                    )
+                ) {
+                    return interaction.reply({
+                        content: "❌ Você precisa ser um administrador!",
+                        ephemeral: true,
                     });
                 }
 
-                const selectedPanelId = getSelectedPanel(interaction.user.id, interaction.guildId);
+                const label = interaction.options.getString("label");
+                const emoji = interaction.options.getString("emoji");
+                const cor = interaction.options.getString("cor") || "Primary";
+
+                const labelValidation = validateButtonLabel(label);
+                if (!labelValidation.valid) {
+                    return interaction.reply({
+                        content: `❌ ${labelValidation.error}`,
+                        ephemeral: true,
+                    });
+                }
+
+                const selectedPanelId = getSelectedPanel(
+                    interaction.user.id,
+                    interaction.guildId,
+                );
                 const testCustomId = createSafeCustomId(selectedPanelId, label);
                 const customIdValidation = validateCustomId(testCustomId);
                 if (!customIdValidation.valid) {
-                    return interaction.reply({ 
-                        content: `❌ O label é muito longo! O ID gerado (${testCustomId.length} chars) excede o limite de 100 caracteres. Use um label mais curto.`, 
-                        ephemeral: true 
+                    return interaction.reply({
+                        content: `❌ O label é muito longo! O ID gerado (${testCustomId.length} chars) excede o limite de 100 caracteres. Use um label mais curto.`,
+                        ephemeral: true,
                     });
                 }
 
                 if (emoji && !isValidEmoji(emoji)) {
-                    return interaction.reply({ 
-                        content: '❌ Emoji inválido! Use um emoji Unicode válido (🎫) ou personalizado (<:nome:id>).', 
-                        ephemeral: true 
+                    return interaction.reply({
+                        content:
+                            "❌ Emoji inválido! Use um emoji Unicode válido (🎫) ou personalizado (<:nome:id>).",
+                        ephemeral: true,
                     });
                 }
 
@@ -1102,92 +1326,137 @@ client.on('interactionCreate', async interaction => {
                     panelConfig.customButtons = [];
                 }
 
-                if (panelConfig.customButtons.some(btn => btn.label === label)) {
-                    return interaction.reply({ content: '❌ Já existe um botão com esse label!', ephemeral: true });
+                if (
+                    panelConfig.customButtons.some((btn) => btn.label === label)
+                ) {
+                    return interaction.reply({
+                        content: "❌ Já existe um botão com esse label!",
+                        ephemeral: true,
+                    });
                 }
 
                 panelConfig.customButtons.push({ label, emoji, style: cor });
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle('✅ Botão Adicionado!')
-                    .setDescription(`**Botão adicionado ao painel "${panelConfig.name}"!**\n\n🏷️ **Label:** ${label}\n${emoji ? `😀 **Emoji:** ${emoji}\n` : ''}🎨 **Cor:** ${cor}`)
-                    .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setTitle("✅ Botão Adicionado!")
+                    .setDescription(
+                        `**Botão adicionado ao painel "${panelConfig.name}"!**\n\n🏷️ **Label:** ${label}\n${emoji ? `😀 **Emoji:** ${emoji}\n` : ""}🎨 **Cor:** ${cor}`,
+                    )
+                    .setColor(0x00ff00)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            if (interaction.commandName === 'remove_button') {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                    return interaction.reply({ content: '❌ Você precisa ser um administrador!', ephemeral: true });
+            if (interaction.commandName === "remove_button") {
+                if (
+                    !interaction.member.permissions.has(
+                        PermissionFlagsBits.Administrator,
+                    )
+                ) {
+                    return interaction.reply({
+                        content: "❌ Você precisa ser um administrador!",
+                        ephemeral: true,
+                    });
                 }
 
-                const label = interaction.options.getString('label');
-                
+                const label = interaction.options.getString("label");
+
                 if (!panelConfig.customButtons) {
-                    return interaction.reply({ content: '❌ Nenhum botão configurado ainda!', ephemeral: true });
+                    return interaction.reply({
+                        content: "❌ Nenhum botão configurado ainda!",
+                        ephemeral: true,
+                    });
                 }
 
-                const index = panelConfig.customButtons.findIndex(btn => btn.label === label);
+                const index = panelConfig.customButtons.findIndex(
+                    (btn) => btn.label === label,
+                );
                 if (index === -1) {
-                    return interaction.reply({ content: '❌ Botão não encontrado!', ephemeral: true });
+                    return interaction.reply({
+                        content: "❌ Botão não encontrado!",
+                        ephemeral: true,
+                    });
                 }
 
                 panelConfig.customButtons.splice(index, 1);
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle('🗑️ Botão Removido!')
-                    .setDescription(`**Botão removido do painel "${panelConfig.name}"!**\n\n🏷️ **Label:** ${label}`)
-                    .setColor(0xFF6B6B)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setTitle("🗑️ Botão Removido!")
+                    .setDescription(
+                        `**Botão removido do painel "${panelConfig.name}"!**\n\n🏷️ **Label:** ${label}`,
+                    )
+                    .setColor(0xff6b6b)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            if (interaction.commandName === 'list_buttons') {
-                if (!panelConfig.customButtons || panelConfig.customButtons.length === 0) {
-                    return interaction.reply({ content: '❌ Nenhum botão personalizado configurado!', ephemeral: true });
+            if (interaction.commandName === "list_buttons") {
+                if (
+                    !panelConfig.customButtons ||
+                    panelConfig.customButtons.length === 0
+                ) {
+                    return interaction.reply({
+                        content: "❌ Nenhum botão personalizado configurado!",
+                        ephemeral: true,
+                    });
                 }
 
-                const botoes = panelConfig.customButtons.map((btn, i) => 
-                    `${i + 1}. **${btn.label}** ${btn.emoji || ''} - Cor: ${btn.style}`
-                ).join('\n');
+                const botoes = panelConfig.customButtons
+                    .map(
+                        (btn, i) =>
+                            `${i + 1}. **${btn.label}** ${btn.emoji || ""} - Cor: ${btn.style}`,
+                    )
+                    .join("\n");
 
                 const embed = new EmbedBuilder()
                     .setTitle(`🔘 Botões - ${panelConfig.name}`)
                     .setDescription(botoes)
-                    .setColor(0x0099FF)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setColor(0x0099ff)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            if (interaction.commandName === 'add_setor') {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                    return interaction.reply({ content: '❌ Você precisa ser um administrador!', ephemeral: true });
+            if (interaction.commandName === "add_setor") {
+                if (
+                    !interaction.member.permissions.has(
+                        PermissionFlagsBits.Administrator,
+                    )
+                ) {
+                    return interaction.reply({
+                        content: "❌ Você precisa ser um administrador!",
+                        ephemeral: true,
+                    });
                 }
 
-                const nome = interaction.options.getString('nome');
-                const descricao = interaction.options.getString('descricao');
-                const emoji = interaction.options.getString('emoji');
+                const nome = interaction.options.getString("nome");
+                const descricao = interaction.options.getString("descricao");
+                const emoji = interaction.options.getString("emoji");
 
-                const setorValidation = validateSelectMenuOption(nome, nome, descricao);
+                const setorValidation = validateSelectMenuOption(
+                    nome,
+                    nome,
+                    descricao,
+                );
                 if (!setorValidation.valid) {
-                    return interaction.reply({ 
-                        content: `❌ ${setorValidation.error}`, 
-                        ephemeral: true 
+                    return interaction.reply({
+                        content: `❌ ${setorValidation.error}`,
+                        ephemeral: true,
                     });
                 }
 
                 if (emoji && !isValidEmoji(emoji)) {
-                    return interaction.reply({ 
-                        content: '❌ Emoji inválido! Use um emoji Unicode válido (🎫) ou personalizado (<:nome:id>).', 
-                        ephemeral: true 
+                    return interaction.reply({
+                        content:
+                            "❌ Emoji inválido! Use um emoji Unicode válido (🎫) ou personalizado (<:nome:id>).",
+                        ephemeral: true,
                     });
                 }
 
@@ -1195,298 +1464,416 @@ client.on('interactionCreate', async interaction => {
                     panelConfig.setores = [];
                 }
 
-                if (panelConfig.setores.some(s => s.nome === nome)) {
-                    return interaction.reply({ content: '❌ Já existe um setor com esse nome!', ephemeral: true });
+                if (panelConfig.setores.some((s) => s.nome === nome)) {
+                    return interaction.reply({
+                        content: "❌ Já existe um setor com esse nome!",
+                        ephemeral: true,
+                    });
                 }
 
                 panelConfig.setores.push({ nome, descricao, emoji });
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle('✅ Setor Adicionado!')
-                    .setDescription(`**Setor adicionado ao painel "${panelConfig.name}"!**\n\n📌 **Nome:** ${nome}\n📝 **Descrição:** ${descricao}${emoji ? `\n😀 **Emoji:** ${emoji}` : ''}`)
-                    .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setTitle("✅ Setor Adicionado!")
+                    .setDescription(
+                        `**Setor adicionado ao painel "${panelConfig.name}"!**\n\n📌 **Nome:** ${nome}\n📝 **Descrição:** ${descricao}${emoji ? `\n😀 **Emoji:** ${emoji}` : ""}`,
+                    )
+                    .setColor(0x00ff00)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            if (interaction.commandName === 'remove_setor') {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                    return interaction.reply({ content: '❌ Você precisa ser um administrador!', ephemeral: true });
+            if (interaction.commandName === "remove_setor") {
+                if (
+                    !interaction.member.permissions.has(
+                        PermissionFlagsBits.Administrator,
+                    )
+                ) {
+                    return interaction.reply({
+                        content: "❌ Você precisa ser um administrador!",
+                        ephemeral: true,
+                    });
                 }
 
-                const nome = interaction.options.getString('nome');
-                
+                const nome = interaction.options.getString("nome");
+
                 if (!panelConfig.setores) {
-                    return interaction.reply({ content: '❌ Nenhum setor configurado ainda!', ephemeral: true });
+                    return interaction.reply({
+                        content: "❌ Nenhum setor configurado ainda!",
+                        ephemeral: true,
+                    });
                 }
 
-                const index = panelConfig.setores.findIndex(s => s.nome === nome);
+                const index = panelConfig.setores.findIndex(
+                    (s) => s.nome === nome,
+                );
                 if (index === -1) {
-                    return interaction.reply({ content: '❌ Setor não encontrado!', ephemeral: true });
+                    return interaction.reply({
+                        content: "❌ Setor não encontrado!",
+                        ephemeral: true,
+                    });
                 }
 
                 panelConfig.setores.splice(index, 1);
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle('🗑️ Setor Removido!')
-                    .setDescription(`**Setor removido do painel "${panelConfig.name}"!**\n\n📌 **Nome:** ${nome}`)
-                    .setColor(0xFF6B6B)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setTitle("🗑️ Setor Removido!")
+                    .setDescription(
+                        `**Setor removido do painel "${panelConfig.name}"!**\n\n📌 **Nome:** ${nome}`,
+                    )
+                    .setColor(0xff6b6b)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            if (interaction.commandName === 'list_setores') {
+            if (interaction.commandName === "list_setores") {
                 if (!panelConfig.setores || panelConfig.setores.length === 0) {
-                    return interaction.reply({ content: '❌ Nenhum setor configurado ainda!', ephemeral: true });
+                    return interaction.reply({
+                        content: "❌ Nenhum setor configurado ainda!",
+                        ephemeral: true,
+                    });
                 }
 
-                const setores = panelConfig.setores.map((s, i) => 
-                    `${i + 1}. ${s.emoji || '📌'} **${s.nome}** - ${s.descricao}`
-                ).join('\n');
+                const setores = panelConfig.setores
+                    .map(
+                        (s, i) =>
+                            `${i + 1}. ${s.emoji || "📌"} **${s.nome}** - ${s.descricao}`,
+                    )
+                    .join("\n");
 
                 const embed = new EmbedBuilder()
                     .setTitle(`📂 Setores - ${panelConfig.name}`)
                     .setDescription(setores)
-                    .setColor(0x0099FF)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setColor(0x0099ff)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            if (interaction.commandName === 'edit_titulo') {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                    return interaction.reply({ content: '❌ Você precisa ser um administrador!', ephemeral: true });
+            if (interaction.commandName === "edit_titulo") {
+                if (
+                    !interaction.member.permissions.has(
+                        PermissionFlagsBits.Administrator,
+                    )
+                ) {
+                    return interaction.reply({
+                        content: "❌ Você precisa ser um administrador!",
+                        ephemeral: true,
+                    });
                 }
 
-                const titulo = interaction.options.getString('titulo');
-                
+                const titulo = interaction.options.getString("titulo");
+
                 if (!panelConfig.customization) {
                     panelConfig.customization = {};
                 }
-                
+
                 if (titulo !== null) {
                     panelConfig.customization.title = titulo;
                 }
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle(titulo && titulo.trim() ? '✅ Título Atualizado!' : '🗑️ Título Removido!')
-                    .setDescription(titulo && titulo.trim() ? 
-                        `**Novo título do painel "${panelConfig.name}":**\n\n${titulo}` :
-                        `**Título removido do painel "${panelConfig.name}". Nenhum título será exibido.**`)
-                    .setColor(titulo && titulo.trim() ? 0x00FF00 : 0xFF6B6B)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setTitle(
+                        titulo && titulo.trim()
+                            ? "✅ Título Atualizado!"
+                            : "🗑️ Título Removido!",
+                    )
+                    .setDescription(
+                        titulo && titulo.trim()
+                            ? `**Novo título do painel "${panelConfig.name}":**\n\n${titulo}`
+                            : `**Título removido do painel "${panelConfig.name}". Nenhum título será exibido.**`,
+                    )
+                    .setColor(titulo && titulo.trim() ? 0x00ff00 : 0xff6b6b)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            if (interaction.commandName === 'edit_descricao') {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                    return interaction.reply({ content: '❌ Você precisa ser um administrador!', ephemeral: true });
+            if (interaction.commandName === "edit_descricao") {
+                if (
+                    !interaction.member.permissions.has(
+                        PermissionFlagsBits.Administrator,
+                    )
+                ) {
+                    return interaction.reply({
+                        content: "❌ Você precisa ser um administrador!",
+                        ephemeral: true,
+                    });
                 }
 
-                const descricao = interaction.options.getString('descricao');
-                
+                const descricao = interaction.options.getString("descricao");
+
                 if (!panelConfig.customization) {
                     panelConfig.customization = {};
                 }
-                
+
                 if (descricao !== null) {
                     panelConfig.customization.description = descricao;
                 }
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle(descricao && descricao.trim() ? '✅ Descrição Atualizada!' : '🗑️ Descrição Removida!')
-                    .setDescription(descricao && descricao.trim() ? 
-                        `**Nova descrição configurada para o painel "${panelConfig.name}"!**\n\n${descricao}` :
-                        `**Descrição removida do painel "${panelConfig.name}". Nenhuma descrição será exibida.**`)
-                    .setColor(descricao && descricao.trim() ? 0x00FF00 : 0xFF6B6B)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setTitle(
+                        descricao && descricao.trim()
+                            ? "✅ Descrição Atualizada!"
+                            : "🗑️ Descrição Removida!",
+                    )
+                    .setDescription(
+                        descricao && descricao.trim()
+                            ? `**Nova descrição configurada para o painel "${panelConfig.name}"!**\n\n${descricao}`
+                            : `**Descrição removida do painel "${panelConfig.name}". Nenhuma descrição será exibida.**`,
+                    )
+                    .setColor(
+                        descricao && descricao.trim() ? 0x00ff00 : 0xff6b6b,
+                    )
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            if (interaction.commandName === 'edit_imagem') {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                    return interaction.reply({ content: '❌ Você precisa ser um administrador!', ephemeral: true });
-                }
-
-                const url = interaction.options.getString('url');
-                
-                if (url && url.trim() && !isValidUrl(url)) {
-                    return interaction.reply({ 
-                        content: '❌ URL inválida! Use uma URL válida começando com http:// ou https://.', 
-                        ephemeral: true 
+            if (interaction.commandName === "edit_imagem") {
+                if (
+                    !interaction.member.permissions.has(
+                        PermissionFlagsBits.Administrator,
+                    )
+                ) {
+                    return interaction.reply({
+                        content: "❌ Você precisa ser um administrador!",
+                        ephemeral: true,
                     });
                 }
-                
+
+                const url = interaction.options.getString("url");
+
+                if (url && url.trim() && !isValidUrl(url)) {
+                    return interaction.reply({
+                        content:
+                            "❌ URL inválida! Use uma URL válida começando com http:// ou https://.",
+                        ephemeral: true,
+                    });
+                }
+
                 if (!panelConfig.customization) {
                     panelConfig.customization = {};
                 }
-                
+
                 if (url !== null) {
                     panelConfig.customization.image = url;
                 }
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle(url && url.trim() ? '✅ Imagem Atualizada!' : '🗑️ Imagem Removida!')
-                    .setDescription(url && url.trim() ? 
-                        `**Imagem do painel "${panelConfig.name}" atualizada!**\n\n📷 URL: ${url}` :
-                        `**Imagem removida do painel "${panelConfig.name}". Nenhuma imagem será exibida.**`)
-                    .setColor(url && url.trim() ? 0x00FF00 : 0xFF6B6B)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setTitle(
+                        url && url.trim()
+                            ? "✅ Imagem Atualizada!"
+                            : "🗑️ Imagem Removida!",
+                    )
+                    .setDescription(
+                        url && url.trim()
+                            ? `**Imagem do painel "${panelConfig.name}" atualizada!**\n\n📷 URL: ${url}`
+                            : `**Imagem removida do painel "${panelConfig.name}". Nenhuma imagem será exibida.**`,
+                    )
+                    .setColor(url && url.trim() ? 0x00ff00 : 0xff6b6b)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            if (interaction.commandName === 'edit_thumbnail') {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                    return interaction.reply({ content: '❌ Você precisa ser um administrador!', ephemeral: true });
-                }
-
-                const url = interaction.options.getString('url');
-                
-                if (url && url.trim() && !isValidUrl(url)) {
-                    return interaction.reply({ 
-                        content: '❌ URL inválida! Use uma URL válida começando com http:// ou https://.', 
-                        ephemeral: true 
+            if (interaction.commandName === "edit_thumbnail") {
+                if (
+                    !interaction.member.permissions.has(
+                        PermissionFlagsBits.Administrator,
+                    )
+                ) {
+                    return interaction.reply({
+                        content: "❌ Você precisa ser um administrador!",
+                        ephemeral: true,
                     });
                 }
-                
+
+                const url = interaction.options.getString("url");
+
+                if (url && url.trim() && !isValidUrl(url)) {
+                    return interaction.reply({
+                        content:
+                            "❌ URL inválida! Use uma URL válida começando com http:// ou https://.",
+                        ephemeral: true,
+                    });
+                }
+
                 if (!panelConfig.customization) {
                     panelConfig.customization = {};
                 }
-                
+
                 if (url !== null) {
                     panelConfig.customization.thumbnail = url;
                 }
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle(url && url.trim() ? '✅ Thumbnail Atualizada!' : '🗑️ Thumbnail Removida!')
-                    .setDescription(url && url.trim() ? 
-                        `**Thumbnail do painel "${panelConfig.name}" atualizada!**\n\n📷 URL: ${url}` :
-                        `**Thumbnail removida do painel "${panelConfig.name}". Nenhuma thumbnail será exibida.**`)
-                    .setColor(url && url.trim() ? 0x00FF00 : 0xFF6B6B)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setTitle(
+                        url && url.trim()
+                            ? "✅ Thumbnail Atualizada!"
+                            : "🗑️ Thumbnail Removida!",
+                    )
+                    .setDescription(
+                        url && url.trim()
+                            ? `**Thumbnail do painel "${panelConfig.name}" atualizada!**\n\n📷 URL: ${url}`
+                            : `**Thumbnail removida do painel "${panelConfig.name}". Nenhuma thumbnail será exibida.**`,
+                    )
+                    .setColor(url && url.trim() ? 0x00ff00 : 0xff6b6b)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            if (interaction.commandName === 'edit_footer') {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                    return interaction.reply({ content: '❌ Você precisa ser um administrador!', ephemeral: true });
+            if (interaction.commandName === "edit_footer") {
+                if (
+                    !interaction.member.permissions.has(
+                        PermissionFlagsBits.Administrator,
+                    )
+                ) {
+                    return interaction.reply({
+                        content: "❌ Você precisa ser um administrador!",
+                        ephemeral: true,
+                    });
                 }
 
-                const texto = interaction.options.getString('texto');
-                
+                const texto = interaction.options.getString("texto");
+
                 if (!panelConfig.customization) {
                     panelConfig.customization = {};
                 }
-                
+
                 if (texto !== null) {
                     panelConfig.customization.footer = texto;
                 }
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle(texto && texto.trim() ? '✅ Rodapé Atualizado!' : '🗑️ Rodapé Removido!')
-                    .setDescription(texto && texto.trim() ? 
-                        `**Rodapé do painel "${panelConfig.name}" atualizado!**\n\n📝 Texto: ${texto}` :
-                        `**Rodapé removido do painel "${panelConfig.name}". Nenhum rodapé será exibido.**`)
-                    .setColor(texto && texto.trim() ? 0x00FF00 : 0xFF6B6B)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setTitle(
+                        texto && texto.trim()
+                            ? "✅ Rodapé Atualizado!"
+                            : "🗑️ Rodapé Removido!",
+                    )
+                    .setDescription(
+                        texto && texto.trim()
+                            ? `**Rodapé do painel "${panelConfig.name}" atualizado!**\n\n📝 Texto: ${texto}`
+                            : `**Rodapé removido do painel "${panelConfig.name}". Nenhum rodapé será exibido.**`,
+                    )
+                    .setColor(texto && texto.trim() ? 0x00ff00 : 0xff6b6b)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            if (interaction.commandName === 'edit_color') {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                    return interaction.reply({ content: '❌ Você precisa ser um administrador!', ephemeral: true });
+            if (interaction.commandName === "edit_color") {
+                if (
+                    !interaction.member.permissions.has(
+                        PermissionFlagsBits.Administrator,
+                    )
+                ) {
+                    return interaction.reply({
+                        content: "❌ Você precisa ser um administrador!",
+                        ephemeral: true,
+                    });
                 }
 
-                let cor = interaction.options.getString('cor');
-                
+                let cor = interaction.options.getString("cor");
+
                 let colorValue;
-                if (cor.startsWith('#')) {
+                if (cor.startsWith("#")) {
                     colorValue = parseInt(cor.substring(1), 16);
-                } else if (cor.startsWith('0x')) {
+                } else if (cor.startsWith("0x")) {
                     colorValue = parseInt(cor, 16);
                 } else {
                     const namedColors = {
-                        'vermelho': 0xFF0000, 'red': 0xFF0000,
-                        'verde': 0x00FF00, 'green': 0x00FF00,
-                        'azul': 0x0099FF, 'blue': 0x0099FF,
-                        'amarelo': 0xFFFF00, 'yellow': 0xFFFF00,
-                        'roxo': 0x9B59B6, 'purple': 0x9B59B6,
-                        'laranja': 0xFF9900, 'orange': 0xFF9900,
-                        'rosa': 0xFF69B4, 'pink': 0xFF69B4,
-                        'preto': 0x000000, 'black': 0x000000,
-                        'branco': 0xFFFFFF, 'white': 0xFFFFFF,
-                        'cinza': 0x808080, 'gray': 0x808080
+                        vermelho: 0xff0000,
+                        red: 0xff0000,
+                        verde: 0x00ff00,
+                        green: 0x00ff00,
+                        azul: 0x0099ff,
+                        blue: 0x0099ff,
+                        amarelo: 0xffff00,
+                        yellow: 0xffff00,
+                        roxo: 0x9b59b6,
+                        purple: 0x9b59b6,
+                        laranja: 0xff9900,
+                        orange: 0xff9900,
+                        rosa: 0xff69b4,
+                        pink: 0xff69b4,
+                        preto: 0x000000,
+                        black: 0x000000,
+                        branco: 0xffffff,
+                        white: 0xffffff,
+                        cinza: 0x808080,
+                        gray: 0x808080,
                     };
                     colorValue = namedColors[cor.toLowerCase()];
                 }
 
                 if (colorValue === undefined || isNaN(colorValue)) {
-                    return interaction.reply({ 
-                        content: '❌ Cor inválida! Use formato hexadecimal (#0099FF ou 0x0099FF) ou nome de cor (vermelho, verde, azul, etc).', 
-                        ephemeral: true 
+                    return interaction.reply({
+                        content:
+                            "❌ Cor inválida! Use formato hexadecimal (#0099FF ou 0x0099FF) ou nome de cor (vermelho, verde, azul, etc).",
+                        ephemeral: true,
                     });
                 }
-                
+
                 if (!panelConfig.customization) {
                     panelConfig.customization = {};
                 }
-                
+
                 panelConfig.customization.color = colorValue;
                 saveConfig();
 
                 const embed = new EmbedBuilder()
-                    .setTitle('✅ Cor Atualizada!')
-                    .setDescription(`**Cor da borda do painel "${panelConfig.name}" atualizada!**`)
+                    .setTitle("✅ Cor Atualizada!")
+                    .setDescription(
+                        `**Cor da borda do painel "${panelConfig.name}" atualizada!**`,
+                    )
                     .setColor(colorValue)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            if (interaction.commandName === 'ver_personalizacao') {
+            if (interaction.commandName === "ver_personalizacao") {
                 const custom = panelConfig.customization || {};
-                const tipoTexto = panelConfig.type === 'buttons' ? 'Botões' : 'Select Menu';
-                
+                const tipoTexto =
+                    panelConfig.type === "buttons" ? "Botões" : "Select Menu";
+
                 const info = [
                     `**Painel:** ${panelConfig.name}`,
-                    '',
+                    "",
                     `🎛️ **Tipo:** ${tipoTexto}`,
-                    `📝 **Título:** ${custom.title || 'Padrão'}`,
-                    `📄 **Descrição:** ${custom.description ? 'Personalizada ✓' : 'Padrão'}`,
-                    `🎨 **Cor:** ${custom.color !== undefined ? `#${custom.color.toString(16).padStart(6, '0').toUpperCase()}` : 'Padrão (#0099FF)'}`,
-                    `🖼️ **Imagem:** ${custom.image || 'Padrão'}`,
-                    `🖼️ **Thumbnail:** ${custom.thumbnail || 'Nenhuma'}`,
-                    `📌 **Rodapé:** ${custom.footer || 'Padrão (Powered by 7M Store)'}`
-                ].join('\n');
+                    `📝 **Título:** ${custom.title || "Padrão"}`,
+                    `📄 **Descrição:** ${custom.description ? "Personalizada ✓" : "Padrão"}`,
+                    `🎨 **Cor:** ${custom.color !== undefined ? `#${custom.color.toString(16).padStart(6, "0").toUpperCase()}` : "Padrão (#0099FF)"}`,
+                    `🖼️ **Imagem:** ${custom.image || "Padrão"}`,
+                    `🖼️ **Thumbnail:** ${custom.thumbnail || "Nenhuma"}`,
+                    `📌 **Rodapé:** ${custom.footer || "Padrão (Powered by 7M Store)"}`,
+                ].join("\n");
 
                 const embed = new EmbedBuilder()
-                    .setTitle('🎨 Personalização do Painel')
+                    .setTitle("🎨 Personalização do Painel")
                     .setDescription(info)
-                    .setColor(custom.color || 0x0099FF)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setColor(custom.color || 0x0099ff)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 if (custom.thumbnail && isValidUrl(custom.thumbnail)) {
@@ -1496,125 +1883,153 @@ client.on('interactionCreate', async interaction => {
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
-            if (interaction.commandName === 'set_tipo_painel') {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                    return interaction.reply({ content: '❌ Você precisa ser um administrador!', ephemeral: true });
+            if (interaction.commandName === "set_tipo_painel") {
+                if (
+                    !interaction.member.permissions.has(
+                        PermissionFlagsBits.Administrator,
+                    )
+                ) {
+                    return interaction.reply({
+                        content: "❌ Você precisa ser um administrador!",
+                        ephemeral: true,
+                    });
                 }
 
-                const tipo = interaction.options.getString('tipo');
+                const tipo = interaction.options.getString("tipo");
                 panelConfig.type = tipo;
                 saveConfig();
 
-                const tipoTexto = tipo === 'select_menu' ? 'Select Menu (Dropdown)' : 'Botões';
+                const tipoTexto =
+                    tipo === "select_menu"
+                        ? "Select Menu (Dropdown)"
+                        : "Botões";
                 const embed = new EmbedBuilder()
-                    .setTitle('✅ Tipo de Painel Atualizado!')
-                    .setDescription(`**O painel "${panelConfig.name}" agora usa:** ${tipoTexto}\n\n${tipo === 'buttons' ? '💡 Use \`/add_button\` para adicionar botões personalizados!' : '💡 Use \`/add_setor\` para adicionar opções ao menu!'}`)
-                    .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setTitle("✅ Tipo de Painel Atualizado!")
+                    .setDescription(
+                        `**O painel "${panelConfig.name}" agora usa:** ${tipoTexto}\n\n${tipo === "buttons" ? "💡 Use \`/add_button\` para adicionar botões personalizados!" : "💡 Use \`/add_setor\` para adicionar opções ao menu!"}`,
+                    )
+                    .setColor(0x00ff00)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 return interaction.reply({ embeds: [embed], ephemeral: true });
             }
         }
 
-        if (interaction.commandName === 'adduser') {
+        if (interaction.commandName === "adduser") {
             const channel = interaction.channel;
 
-            if (!channel.name.startsWith('ticket-de-')) {
-                return interaction.reply({ 
-                    content: '❌ Este comando só pode ser usado em canais de ticket!', 
-                    ephemeral: true 
+            if (!channel.name.startsWith("ticket-de-")) {
+                return interaction.reply({
+                    content:
+                        "❌ Este comando só pode ser usado em canais de ticket!",
+                    ephemeral: true,
                 });
             }
 
-            const usuario = interaction.options.getUser('usuario');
+            const usuario = interaction.options.getUser("usuario");
 
             try {
                 await channel.permissionOverwrites.create(usuario.id, {
                     ViewChannel: true,
                     SendMessages: true,
-                    ReadMessageHistory: true
+                    ReadMessageHistory: true,
                 });
 
                 const addEmbed = new EmbedBuilder()
-                    .setTitle('✅ Usuário Adicionado')
-                    .setDescription(`${usuario} foi adicionado ao ticket por ${interaction.user}.`)
-                    .setColor(0x00FF00)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setTitle("✅ Usuário Adicionado")
+                    .setDescription(
+                        `${usuario} foi adicionado ao ticket por ${interaction.user}.`,
+                    )
+                    .setColor(0x00ff00)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 await interaction.reply({ embeds: [addEmbed] });
-                console.log(`✅ Usuário ${usuario.tag} adicionado ao ${channel.name} por ${interaction.user.tag}`);
+                console.log(
+                    `✅ Usuário ${usuario.tag} adicionado ao ${channel.name} por ${interaction.user.tag}`,
+                );
             } catch (error) {
-                console.error('❌ Erro ao adicionar usuário:', error);
-                return interaction.reply({ 
-                    content: '❌ Erro ao adicionar o usuário. Verifique as permissões do bot.', 
-                    ephemeral: true 
+                console.error("❌ Erro ao adicionar usuário:", error);
+                return interaction.reply({
+                    content:
+                        "❌ Erro ao adicionar o usuário. Verifique as permissões do bot.",
+                    ephemeral: true,
                 });
             }
         }
 
-        if (interaction.commandName === 'remove_user') {
+        if (interaction.commandName === "remove_user") {
             const channel = interaction.channel;
 
-            if (!channel.name.startsWith('ticket-de-')) {
-                return interaction.reply({ 
-                    content: '❌ Este comando só pode ser usado em canais de ticket!', 
-                    ephemeral: true 
+            if (!channel.name.startsWith("ticket-de-")) {
+                return interaction.reply({
+                    content:
+                        "❌ Este comando só pode ser usado em canais de ticket!",
+                    ephemeral: true,
                 });
             }
 
-            const usuario = interaction.options.getUser('usuario');
+            const usuario = interaction.options.getUser("usuario");
 
             try {
                 await channel.permissionOverwrites.delete(usuario.id);
 
                 const removeEmbed = new EmbedBuilder()
-                    .setTitle('🚫 Usuário Removido')
-                    .setDescription(`${usuario} foi removido do ticket por ${interaction.user}.`)
-                    .setColor(0xFF6B6B)
-                    .setFooter({ text: 'Powered by 7M Store' })
+                    .setTitle("🚫 Usuário Removido")
+                    .setDescription(
+                        `${usuario} foi removido do ticket por ${interaction.user}.`,
+                    )
+                    .setColor(0xff6b6b)
+                    .setFooter({ text: "Powered by 7M Store" })
                     .setTimestamp();
 
                 await interaction.reply({ embeds: [removeEmbed] });
-                console.log(`🚫 Usuário ${usuario.tag} removido do ${channel.name} por ${interaction.user.tag}`);
+                console.log(
+                    `🚫 Usuário ${usuario.tag} removido do ${channel.name} por ${interaction.user.tag}`,
+                );
             } catch (error) {
-                console.error('❌ Erro ao remover usuário:', error);
-                return interaction.reply({ 
-                    content: '❌ Erro ao remover o usuário. Verifique as permissões do bot.', 
-                    ephemeral: true 
+                console.error("❌ Erro ao remover usuário:", error);
+                return interaction.reply({
+                    content:
+                        "❌ Erro ao remover o usuário. Verifique as permissões do bot.",
+                    ephemeral: true,
                 });
             }
         }
     }
 
     if (interaction.isButton()) {
-        
-        if (interaction.customId.startsWith('create_ticket:')) {
-            const parts = interaction.customId.split(':');
+        if (interaction.customId.startsWith("create_ticket:")) {
+            const parts = interaction.customId.split(":");
             const panelId = parts[1];
-            const buttonLabel = parts.slice(2).join(':');
-            
+            const buttonLabel = parts.slice(2).join(":");
+
             const panelConfig = getPanelConfig(interaction.guildId, panelId);
 
             if (!panelConfig || !panelConfig.categoryId) {
-                return interaction.reply({ 
-                    content: '❌ Este painel não está configurado corretamente! Peça a um administrador para usar `/selecionar_painel` e `/setup`.', 
-                    ephemeral: true 
+                return interaction.reply({
+                    content:
+                        "❌ Este painel não está configurado corretamente! Peça a um administrador para usar `/selecionar_painel` e `/setup`.",
+                    ephemeral: true,
                 });
             }
 
-            const sanitizedUsername = sanitizeUsername(interaction.user.username);
+            const sanitizedUsername = sanitizeUsername(
+                interaction.user.username,
+            );
             const ticketChannelName = `ticket-de-${sanitizedUsername}`;
-            
+
             const existingChannel = interaction.guild.channels.cache.find(
-                ch => ch.name === ticketChannelName && ch.type === ChannelType.GuildText
+                (ch) =>
+                    ch.name === ticketChannelName &&
+                    ch.type === ChannelType.GuildText,
             );
 
             if (existingChannel) {
-                return interaction.reply({ 
-                    content: `❌ Você já tem um ticket aberto: ${existingChannel}`, 
-                    ephemeral: true 
+                return interaction.reply({
+                    content: `❌ Você já tem um ticket aberto: ${existingChannel}`,
+                    ephemeral: true,
                 });
             }
 
@@ -1624,45 +2039,48 @@ client.on('interactionCreate', async interaction => {
                 const permissionOverwrites = [
                     {
                         id: interaction.guild.roles.everyone.id,
-                        deny: [PermissionFlagsBits.ViewChannel]
+                        deny: [PermissionFlagsBits.ViewChannel],
                     },
                     {
                         id: interaction.user.id,
                         allow: [
-                            PermissionFlagsBits.ViewChannel, 
-                            PermissionFlagsBits.SendMessages, 
-                            PermissionFlagsBits.ReadMessageHistory
-                        ]
+                            PermissionFlagsBits.ViewChannel,
+                            PermissionFlagsBits.SendMessages,
+                            PermissionFlagsBits.ReadMessageHistory,
+                        ],
                     },
                     {
                         id: client.user.id,
                         allow: [
                             PermissionFlagsBits.ViewChannel,
                             PermissionFlagsBits.SendMessages,
-                            PermissionFlagsBits.ManageChannels
-                        ]
-                    }
+                            PermissionFlagsBits.ManageChannels,
+                        ],
+                    },
                 ];
 
-                if (panelConfig.supportRoles && panelConfig.supportRoles.length > 0) {
-                    panelConfig.supportRoles.forEach(roleId => {
+                if (
+                    panelConfig.supportRoles &&
+                    panelConfig.supportRoles.length > 0
+                ) {
+                    panelConfig.supportRoles.forEach((roleId) => {
                         permissionOverwrites.push({
                             id: roleId,
                             allow: [
-                                PermissionFlagsBits.ViewChannel, 
-                                PermissionFlagsBits.SendMessages, 
-                                PermissionFlagsBits.ReadMessageHistory
-                            ]
+                                PermissionFlagsBits.ViewChannel,
+                                PermissionFlagsBits.SendMessages,
+                                PermissionFlagsBits.ReadMessageHistory,
+                            ],
                         });
                     });
                 } else if (panelConfig.supportRoleId) {
                     permissionOverwrites.push({
                         id: panelConfig.supportRoleId,
                         allow: [
-                            PermissionFlagsBits.ViewChannel, 
-                            PermissionFlagsBits.SendMessages, 
-                            PermissionFlagsBits.ReadMessageHistory
-                        ]
+                            PermissionFlagsBits.ViewChannel,
+                            PermissionFlagsBits.SendMessages,
+                            PermissionFlagsBits.ReadMessageHistory,
+                        ],
                     });
                 }
 
@@ -1670,87 +2088,122 @@ client.on('interactionCreate', async interaction => {
                     name: ticketChannelName,
                     type: ChannelType.GuildText,
                     parent: panelConfig.categoryId,
-                    permissionOverwrites: permissionOverwrites
+                    permissionOverwrites: permissionOverwrites,
                 });
 
                 ticketMetadata.set(ticketChannel.id, {
                     guildId: interaction.guildId,
                     panelId: panelId,
                     userId: interaction.user.id,
-                    channelId: ticketChannel.id
+                    channelId: ticketChannel.id,
                 });
 
                 const ticketEmbed = new EmbedBuilder()
-                    .setTitle('🎫 Ticket - Menu Inicial')
-                    .setDescription('Aguarde a chegada da equipe de suporte para dar continuidade ao atendimento. Enquanto isso, aproveite para nos fornecer mais detalhes sobre o que você precisa.')
-                    .addFields(
-                        { name: '👤 Usuário', value: `${interaction.user} 🎲`, inline: false },
-                        { name: '📄 Motivo', value: buttonLabel, inline: false },
-                        { name: '👮 Staff', value: 'Ninguém reivindicou esse ticket!', inline: false }
+                    .setTitle("🎫 Ticket - Menu Inicial")
+                    .setDescription(
+                        "Aguarde a chegada da equipe de suporte para dar continuidade ao atendimento. Enquanto isso, aproveite para nos fornecer mais detalhes sobre o que você precisa.",
                     )
-                    .setColor(0x5865F2)
-                    .setFooter({ text: 'Mensagem de: DRAGON STORE' })
+                    .addFields(
+                        {
+                            name: "👤 Usuário",
+                            value: `${interaction.user} 🎲`,
+                            inline: false,
+                        },
+                        {
+                            name: "📄 Motivo",
+                            value: buttonLabel,
+                            inline: false,
+                        },
+                        {
+                            name: "👮 Staff",
+                            value: "Ninguém reivindicou esse ticket!",
+                            inline: false,
+                        },
+                    )
+                    .setColor(0x5865f2)
+                    .setFooter({ text: "Mensagem de: DRAGON STORE" })
                     .setTimestamp();
 
                 const row = buildTicketControls();
 
-                const mentionRoles = panelConfig.supportRoles && panelConfig.supportRoles.length > 0
-                    ? panelConfig.supportRoles.map(roleId => `<@&${roleId}>`).join(' ')
-                    : (panelConfig.supportRoleId ? `<@&${panelConfig.supportRoleId}>` : '');
+                const mentionRoles =
+                    panelConfig.supportRoles &&
+                    panelConfig.supportRoles.length > 0
+                        ? panelConfig.supportRoles
+                              .map((roleId) => `<@&${roleId}>`)
+                              .join(" ")
+                        : panelConfig.supportRoleId
+                          ? `<@&${panelConfig.supportRoleId}>`
+                          : "";
 
-                await ticketChannel.send({ 
-                    content: `${interaction.user}${mentionRoles ? ' ' + mentionRoles : ''}`, 
-                    embeds: [ticketEmbed], 
-                    components: [row] 
+                await ticketChannel.send({
+                    content: `${interaction.user}${mentionRoles ? " " + mentionRoles : ""}`,
+                    embeds: [ticketEmbed],
+                    components: [row],
                 });
 
                 const goToTicketButton = new ButtonBuilder()
-                    .setLabel('Go to Ticket')
-                    .setEmoji('🔗')
+                    .setLabel("Go to Ticket")
+                    .setEmoji("🔗")
                     .setStyle(ButtonStyle.Link)
-                    .setURL(`https://discord.com/channels/${interaction.guildId}/${ticketChannel.id}`);
+                    .setURL(
+                        `https://discord.com/channels/${interaction.guildId}/${ticketChannel.id}`,
+                    );
 
-                const buttonRow = new ActionRowBuilder().addComponents(goToTicketButton);
+                const buttonRow = new ActionRowBuilder().addComponents(
+                    goToTicketButton,
+                );
 
                 await interaction.editReply({
-                    content: '✅ Your ticket has been created!',
-                    components: [buttonRow]
+                    content: "✅ Your ticket has been created!",
+                    components: [buttonRow],
                 });
 
-                console.log(`✅ Ticket criado: ${ticketChannelName} por ${interaction.user.tag} - Painel: ${panelConfig.name} - Botão: ${buttonLabel}`);
+                console.log(
+                    `✅ Ticket criado: ${ticketChannelName} por ${interaction.user.tag} - Painel: ${panelConfig.name} - Botão: ${buttonLabel}`,
+                );
 
                 if (panelConfig.logsChannelId) {
-                    const logsChannel = interaction.guild.channels.cache.get(panelConfig.logsChannelId);
+                    const logsChannel = interaction.guild.channels.cache.get(
+                        panelConfig.logsChannelId,
+                    );
                     if (logsChannel) {
                         const logEmbed = new EmbedBuilder()
-                            .setTitle('📂 Ticket Aberto')
-                            .setDescription(`**Usuário:** ${interaction.user} (${interaction.user.tag})\n**ID:** ${interaction.user.id}\n**Painel:** ${panelConfig.name}\n**Categoria:** ${buttonLabel}\n**Canal:** ${ticketChannel}\n**Horário:** <t:${Math.floor(Date.now() / 1000)}:F>`)
-                            .setColor(0x00FF00)
-                            .setFooter({ text: 'Powered by 7M Store' })
+                            .setTitle("📂 Ticket Aberto")
+                            .setDescription(
+                                `**Usuário:** ${interaction.user} (${interaction.user.tag})\n**ID:** ${interaction.user.id}\n**Painel:** ${panelConfig.name}\n**Categoria:** ${buttonLabel}\n**Canal:** ${ticketChannel}\n**Horário:** <t:${Math.floor(Date.now() / 1000)}:F>`,
+                            )
+                            .setColor(0x00ff00)
+                            .setFooter({ text: "Powered by 7M Store" })
                             .setTimestamp();
-                        
-                        await logsChannel.send({ embeds: [logEmbed] }).catch(err => {
-                            console.error('❌ Erro ao enviar log de ticket aberto:', err);
-                        });
+
+                        await logsChannel
+                            .send({ embeds: [logEmbed] })
+                            .catch((err) => {
+                                console.error(
+                                    "❌ Erro ao enviar log de ticket aberto:",
+                                    err,
+                                );
+                            });
                     }
                 }
-
             } catch (error) {
-                console.error('❌ Erro ao criar ticket:', error);
-                return interaction.followUp({ 
-                    content: `❌ Erro ao criar o ticket: ${error.message}`, 
-                    ephemeral: true 
+                console.error("❌ Erro ao criar ticket:", error);
+                return interaction.followUp({
+                    content: `❌ Erro ao criar o ticket: ${error.message}`,
+                    ephemeral: true,
                 });
             }
         }
-        
-        if (interaction.customId === 'reivindicar_ticket') {
+
+        if (interaction.customId === "reivindicar_ticket") {
             const channel = interaction.channel;
 
-            if (!channel.name.startsWith('ticket-de-')) {
-                return interaction.reply({ 
-                    content: '❌ Este comando só pode ser usado em canais de ticket!', 
-                    ephemeral: true 
+            if (!channel.name.startsWith("ticket-de-")) {
+                return interaction.reply({
+                    content:
+                        "❌ Este comando só pode ser usado em canais de ticket!",
+                    ephemeral: true,
                 });
             }
 
@@ -1771,91 +2224,116 @@ client.on('interactionCreate', async interaction => {
             }
 
             if (!hasSupport) {
-                return interaction.reply({ 
-                    content: '❌ Apenas membros da equipe de suporte podem reivindicar tickets!', 
-                    ephemeral: true 
+                return interaction.reply({
+                    content:
+                        "❌ Apenas membros da equipe de suporte podem reivindicar tickets!",
+                    ephemeral: true,
                 });
             }
 
             ticketClaimedBy.set(channel.id, interaction.user.tag);
 
             const messages = await channel.messages.fetch({ limit: 10 });
-            const ticketMessage = messages.find(msg => 
-                msg.author.id === client.user.id && 
-                msg.embeds.length > 0 && 
-                msg.embeds[0].title === '🎫 Ticket - Menu Inicial'
+            const ticketMessage = messages.find(
+                (msg) =>
+                    msg.author.id === client.user.id &&
+                    msg.embeds.length > 0 &&
+                    msg.embeds[0].title === "🎫 Ticket - Menu Inicial",
             );
 
             if (ticketMessage) {
                 const oldEmbed = ticketMessage.embeds[0];
                 const updatedEmbed = EmbedBuilder.from(oldEmbed);
-                
-                updatedEmbed.data.fields = oldEmbed.fields.map(field => {
-                    if (field.name === '👮 Staff') {
+
+                updatedEmbed.data.fields = oldEmbed.fields.map((field) => {
+                    if (field.name === "👮 Staff") {
                         return { ...field, value: `${interaction.user}` };
                     }
                     return field;
                 });
 
-                await ticketMessage.edit({ embeds: [updatedEmbed], components: ticketMessage.components });
+                await ticketMessage.edit({
+                    embeds: [updatedEmbed],
+                    components: ticketMessage.components,
+                });
             }
 
             const claimEmbed = new EmbedBuilder()
-                .setTitle('✋ Ticket Reivindicado')
-                .setDescription(`Este ticket foi reivindicado por ${interaction.user}.\n\nEle será responsável pelo atendimento.`)
-                .setColor(0xFFD700)
-                .setFooter({ text: 'Powered by 7M Store' })
+                .setTitle("✋ Ticket Reivindicado")
+                .setDescription(
+                    `Este ticket foi reivindicado por ${interaction.user}.\n\nEle será responsável pelo atendimento.`,
+                )
+                .setColor(0xffd700)
+                .setFooter({ text: "Powered by 7M Store" })
                 .setTimestamp();
 
             await interaction.reply({ embeds: [claimEmbed] });
-            console.log(`✋ Ticket ${channel.name} reivindicado por ${interaction.user.tag}`);
+            console.log(
+                `✋ Ticket ${channel.name} reivindicado por ${interaction.user.tag}`,
+            );
         }
 
-        if (interaction.customId === 'fechar_ticket') {
+        if (interaction.customId === "fechar_ticket") {
             const channel = interaction.channel;
 
-            if (!channel.name.startsWith('ticket-de-')) {
-                return interaction.reply({ 
-                    content: '❌ Este comando só pode ser usado em canais de ticket!', 
-                    ephemeral: true 
+            if (!channel.name.startsWith("ticket-de-")) {
+                return interaction.reply({
+                    content:
+                        "❌ Este comando só pode ser usado em canais de ticket!",
+                    ephemeral: true,
                 });
             }
 
             const closeEmbed = new EmbedBuilder()
-                .setTitle('🔒 Ticket Fechado')
-                .setDescription(`Ticket fechado por ${interaction.user}.\n\nEste canal será deletado em 5 segundos...`)
-                .setColor(0xFF0000)
-                .setFooter({ text: 'Powered by 7M Store' })
+                .setTitle("🔒 Ticket Fechado")
+                .setDescription(
+                    `Ticket fechado por ${interaction.user}.\n\nEste canal será deletado em 5 segundos...`,
+                )
+                .setColor(0xff0000)
+                .setFooter({ text: "Powered by 7M Store" })
                 .setTimestamp();
 
             await interaction.reply({ embeds: [closeEmbed] });
 
-            console.log(`🔒 Ticket fechado: ${channel.name} por ${interaction.user.tag}`);
+            console.log(
+                `🔒 Ticket fechado: ${channel.name} por ${interaction.user.tag}`,
+            );
 
             const guildConfig = config[interaction.guildId];
             if (guildConfig?.panels) {
                 let logSent = false;
                 for (const panel of Object.values(guildConfig.panels)) {
                     if (panel.logsChannelId && !logSent) {
-                        const logsChannel = interaction.guild.channels.cache.get(panel.logsChannelId);
+                        const logsChannel =
+                            interaction.guild.channels.cache.get(
+                                panel.logsChannelId,
+                            );
                         if (logsChannel) {
-                            const username = channel.name.replace('ticket-de-', '');
-                            
+                            const username = channel.name.replace(
+                                "ticket-de-",
+                                "",
+                            );
+
                             const logEmbed = new EmbedBuilder()
-                                .setTitle('🔒 Ticket Fechado')
+                                .setTitle("🔒 Ticket Fechado")
                                 .setDescription(
                                     `**Username do Ticket:** ${username}\n` +
-                                    `**Fechado por:** ${interaction.user} (${interaction.user.tag})\n` +
-                                    `**Canal:** #${channel.name}\n` +
-                                    `**Horário:** <t:${Math.floor(Date.now() / 1000)}:F>`
+                                        `**Fechado por:** ${interaction.user} (${interaction.user.tag})\n` +
+                                        `**Canal:** #${channel.name}\n` +
+                                        `**Horário:** <t:${Math.floor(Date.now() / 1000)}:F>`,
                                 )
-                                .setColor(0xFF0000)
-                                .setFooter({ text: 'Powered by 7M Store' })
+                                .setColor(0xff0000)
+                                .setFooter({ text: "Powered by 7M Store" })
                                 .setTimestamp();
-                            
-                            await logsChannel.send({ embeds: [logEmbed] }).catch(err => {
-                                console.error('❌ Erro ao enviar log de ticket fechado:', err);
-                            });
+
+                            await logsChannel
+                                .send({ embeds: [logEmbed] })
+                                .catch((err) => {
+                                    console.error(
+                                        "❌ Erro ao enviar log de ticket fechado:",
+                                        err,
+                                    );
+                                });
                             logSent = true;
                         }
                     }
@@ -1863,142 +2341,178 @@ client.on('interactionCreate', async interaction => {
             }
 
             setTimeout(() => {
-                channel.delete().catch(err => {
-                    console.error('❌ Erro ao deletar canal:', err);
+                channel.delete().catch((err) => {
+                    console.error("❌ Erro ao deletar canal:", err);
                 });
             }, 5000);
         }
 
-        if (interaction.customId === 'arquivar_ticket') {
+        if (interaction.customId === "arquivar_ticket") {
             const channel = interaction.channel;
 
-            if (!channel.name.startsWith('ticket-de-')) {
-                return interaction.reply({ 
-                    content: '❌ Este comando só pode ser usado em canais de ticket!', 
-                    ephemeral: true 
+            if (!channel.name.startsWith("ticket-de-")) {
+                return interaction.reply({
+                    content:
+                        "❌ Este comando só pode ser usado em canais de ticket!",
+                    ephemeral: true,
                 });
             }
 
             const archiveEmbed = new EmbedBuilder()
-                .setTitle('📁 Ticket Arquivado')
-                .setDescription(`Ticket arquivado por ${interaction.user}.\n\nEste canal será arquivado.`)
-                .setColor(0x95A5A6)
-                .setFooter({ text: 'Powered by 7M Store' })
+                .setTitle("📁 Ticket Arquivado")
+                .setDescription(
+                    `Ticket arquivado por ${interaction.user}.\n\nEste canal será arquivado.`,
+                )
+                .setColor(0x95a5a6)
+                .setFooter({ text: "Powered by 7M Store" })
                 .setTimestamp();
 
             await interaction.reply({ embeds: [archiveEmbed] });
 
             try {
-                await channel.permissionOverwrites.edit(channel.guild.roles.everyone, {
-                    SendMessages: false
-                });
+                await channel.permissionOverwrites.edit(
+                    channel.guild.roles.everyone,
+                    {
+                        SendMessages: false,
+                    },
+                );
 
                 const messages = await channel.messages.fetch({ limit: 10 });
-                const ticketMessage = messages.find(msg => 
-                    msg.author.id === client.user.id && 
-                    msg.embeds.length > 0 && 
-                    msg.embeds[0].title === '🎫 Ticket - Menu Inicial'
+                const ticketMessage = messages.find(
+                    (msg) =>
+                        msg.author.id === client.user.id &&
+                        msg.embeds.length > 0 &&
+                        msg.embeds[0].title === "🎫 Ticket - Menu Inicial",
                 );
 
                 if (ticketMessage) {
                     await ticketMessage.edit({ components: [] });
                 }
 
-                console.log(`📁 Ticket arquivado: ${channel.name} por ${interaction.user.tag}`);
+                console.log(
+                    `📁 Ticket arquivado: ${channel.name} por ${interaction.user.tag}`,
+                );
             } catch (error) {
-                console.error('❌ Erro ao arquivar ticket:', error);
+                console.error("❌ Erro ao arquivar ticket:", error);
             }
         }
 
         // Ticket gear interactions
-        if (interaction.customId === 'ticket_settings') {
+        if (interaction.customId === "ticket_settings") {
             const context = getTicketContext(interaction.channelId);
-            
+
             if (!context) {
-                return interaction.reply({ 
-                    content: '❌ Não foi possível recuperar as informações deste ticket!', 
-                    ephemeral: true 
+                return interaction.reply({
+                    content:
+                        "❌ Não foi possível recuperar as informações deste ticket!",
+                    ephemeral: true,
                 });
             }
 
-            const panelConfig = getPanelConfig(context.guildId, context.panelId);
+            const panelConfig = getPanelConfig(
+                context.guildId,
+                context.panelId,
+            );
             if (!panelConfig) {
-                return interaction.reply({ 
-                    content: '❌ Configuração do painel não encontrada!', 
-                    ephemeral: true 
+                return interaction.reply({
+                    content: "❌ Configuração do painel não encontrada!",
+                    ephemeral: true,
                 });
             }
 
             let hasSupport = false;
-            if (panelConfig.supportRoles && panelConfig.supportRoles.length > 0) {
-                hasSupport = panelConfig.supportRoles.some(roleId => 
-                    interaction.member.roles.cache.has(roleId)
+            if (
+                panelConfig.supportRoles &&
+                panelConfig.supportRoles.length > 0
+            ) {
+                hasSupport = panelConfig.supportRoles.some((roleId) =>
+                    interaction.member.roles.cache.has(roleId),
                 );
             } else if (panelConfig.supportRoleId) {
-                hasSupport = interaction.member.roles.cache.has(panelConfig.supportRoleId);
+                hasSupport = interaction.member.roles.cache.has(
+                    panelConfig.supportRoleId,
+                );
             }
 
-            if (!hasSupport && !interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                return interaction.reply({ 
-                    content: '❌ Apenas membros da equipe de suporte podem acessar as configurações do ticket!', 
-                    ephemeral: true 
+            if (
+                !hasSupport &&
+                !interaction.member.permissions.has(
+                    PermissionFlagsBits.Administrator,
+                )
+            ) {
+                return interaction.reply({
+                    content:
+                        "❌ Apenas membros da equipe de suporte podem acessar as configurações do ticket!",
+                    ephemeral: true,
                 });
             }
 
             const settingsEmbed = new EmbedBuilder()
-                .setTitle('⚙️ Configurações do Ticket')
-                .setDescription('Selecione uma ação abaixo:\n\nHoje às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }))
-                .setColor(0x5865F2)
+                .setTitle("⚙️ Configurações do Ticket")
+                .setDescription(
+                    "Selecione uma ação abaixo:\n\nHoje às " +
+                        new Date().toLocaleTimeString("pt-BR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                        }),
+                )
+                .setColor(0x5865f2)
                 .setTimestamp();
 
             const settingsSelectMenu = new StringSelectMenuBuilder()
-                .setCustomId('ticket_settings_menu')
-                .setPlaceholder('Selecione uma ação abaixo:')
+                .setCustomId("ticket_settings_menu")
+                .setPlaceholder("Selecione uma ação abaixo:")
                 .addOptions([
                     new StringSelectMenuOptionBuilder()
-                        .setLabel('Notificar Usuário')
-                        .setDescription('Enviar uma notificação ao criador do ticket')
-                        .setValue('notify_user')
-                        .setEmoji('📧'),
+                        .setLabel("Notificar Usuário")
+                        .setDescription(
+                            "Enviar uma notificação ao criador do ticket",
+                        )
+                        .setValue("notify_user")
+                        .setEmoji("📧"),
                     new StringSelectMenuOptionBuilder()
-                        .setLabel('Adicionar Usuário')
-                        .setDescription('Adicionar um usuário ao ticket')
-                        .setValue('add_user')
-                        .setEmoji('➕'),
+                        .setLabel("Adicionar Usuário")
+                        .setDescription("Adicionar um usuário ao ticket")
+                        .setValue("add_user")
+                        .setEmoji("➕"),
                     new StringSelectMenuOptionBuilder()
-                        .setLabel('Remover Usuário')
-                        .setDescription('Remover um usuário do ticket')
-                        .setValue('remove_user')
-                        .setEmoji('➖'),
+                        .setLabel("Remover Usuário")
+                        .setDescription("Remover um usuário do ticket")
+                        .setValue("remove_user")
+                        .setEmoji("➖"),
                     new StringSelectMenuOptionBuilder()
-                        .setLabel('Notificar Staff')
-                        .setDescription('Notificar a equipe de suporte')
-                        .setValue('notify_staff')
-                        .setEmoji('🔔')
+                        .setLabel("Notificar Staff")
+                        .setDescription("Notificar a equipe de suporte")
+                        .setValue("notify_staff")
+                        .setEmoji("🔔"),
                 ]);
 
-            const settingsRow = new ActionRowBuilder().addComponents(settingsSelectMenu);
+            const settingsRow = new ActionRowBuilder().addComponents(
+                settingsSelectMenu,
+            );
 
-            return interaction.reply({ 
-                embeds: [settingsEmbed], 
-                components: [settingsRow], 
-                ephemeral: true 
+            return interaction.reply({
+                embeds: [settingsEmbed],
+                components: [settingsRow],
+                ephemeral: true,
             });
         }
 
-        if (interaction.customId === 'ticket_settings_menu') {
+        if (interaction.customId === "ticket_settings_menu") {
             const selectedAction = interaction.values[0];
 
-            if (selectedAction === 'notify_user') {
+            if (selectedAction === "notify_user") {
                 const modal = new ModalBuilder()
-                    .setCustomId('modal_notify_user')
-                    .setTitle('Notificar Usuário');
+                    .setCustomId("modal_notify_user")
+                    .setTitle("Notificar Usuário");
 
                 const messageInput = new TextInputBuilder()
-                    .setCustomId('notify_message')
-                    .setLabel('Mensagem para enviar ao usuário')
+                    .setCustomId("notify_message")
+                    .setLabel("Mensagem para enviar ao usuário")
                     .setStyle(TextInputStyle.Paragraph)
-                    .setPlaceholder('Digite a mensagem que será enviada por DM ao criador do ticket...')
+                    .setPlaceholder(
+                        "Digite a mensagem que será enviada por DM ao criador do ticket...",
+                    )
                     .setRequired(true)
                     .setMaxLength(2000);
 
@@ -2008,228 +2522,258 @@ client.on('interactionCreate', async interaction => {
                 await interaction.showModal(modal);
             }
 
-            if (selectedAction === 'add_user') {
+            if (selectedAction === "add_user") {
                 await interaction.deferReply({ ephemeral: true });
 
                 try {
                     const members = await interaction.guild.members.fetch();
                     const userOptions = members
-                        .filter(member => !member.user.bot)
-                        .map(member => ({
+                        .filter((member) => !member.user.bot)
+                        .map((member) => ({
                             label: member.user.username.substring(0, 100),
                             description: `ID: ${member.user.id}`,
-                            value: member.user.id
+                            value: member.user.id,
                         }))
                         .slice(0, 25);
 
                     if (userOptions.length === 0) {
                         return interaction.editReply({
-                            content: '❌ Nenhum usuário disponível para adicionar!',
-                            ephemeral: true
+                            content:
+                                "❌ Nenhum usuário disponível para adicionar!",
+                            ephemeral: true,
                         });
                     }
 
                     const userSelectMenu = new StringSelectMenuBuilder()
-                        .setCustomId('select_user_to_add')
-                        .setPlaceholder('Selecione o usuário para adicionar')
+                        .setCustomId("select_user_to_add")
+                        .setPlaceholder("Selecione o usuário para adicionar")
                         .addOptions(userOptions);
 
-                    const userRow = new ActionRowBuilder().addComponents(userSelectMenu);
+                    const userRow = new ActionRowBuilder().addComponents(
+                        userSelectMenu,
+                    );
 
                     const embed = new EmbedBuilder()
-                        .setTitle('➕ Adicionar Usuário ao Ticket')
-                        .setDescription('Selecione o usuário que deseja adicionar ao ticket:')
-                        .setColor(0x00FF00)
+                        .setTitle("➕ Adicionar Usuário ao Ticket")
+                        .setDescription(
+                            "Selecione o usuário que deseja adicionar ao ticket:",
+                        )
+                        .setColor(0x00ff00)
                         .setTimestamp();
 
                     await interaction.editReply({
                         embeds: [embed],
                         components: [userRow],
-                        ephemeral: true
+                        ephemeral: true,
                     });
                 } catch (error) {
-                    console.error('Erro ao buscar membros:', error);
+                    console.error("Erro ao buscar membros:", error);
                     await interaction.editReply({
-                        content: '❌ Erro ao buscar membros do servidor!',
-                        ephemeral: true
+                        content: "❌ Erro ao buscar membros do servidor!",
+                        ephemeral: true,
                     });
                 }
             }
 
-            if (selectedAction === 'remove_user') {
+            if (selectedAction === "remove_user") {
                 await interaction.deferReply({ ephemeral: true });
 
                 try {
                     const members = await interaction.guild.members.fetch();
                     const userOptions = members
-                        .filter(member => !member.user.bot)
-                        .map(member => ({
+                        .filter((member) => !member.user.bot)
+                        .map((member) => ({
                             label: member.user.username.substring(0, 100),
                             description: `ID: ${member.user.id}`,
-                            value: member.user.id
+                            value: member.user.id,
                         }))
                         .slice(0, 25);
 
                     if (userOptions.length === 0) {
                         return interaction.editReply({
-                            content: '❌ Nenhum usuário disponível para remover!',
-                            ephemeral: true
+                            content:
+                                "❌ Nenhum usuário disponível para remover!",
+                            ephemeral: true,
                         });
                     }
 
                     const userSelectMenu = new StringSelectMenuBuilder()
-                        .setCustomId('select_user_to_remove')
-                        .setPlaceholder('Selecione o usuário para remover')
+                        .setCustomId("select_user_to_remove")
+                        .setPlaceholder("Selecione o usuário para remover")
                         .addOptions(userOptions);
 
-                    const userRow = new ActionRowBuilder().addComponents(userSelectMenu);
+                    const userRow = new ActionRowBuilder().addComponents(
+                        userSelectMenu,
+                    );
 
                     const embed = new EmbedBuilder()
-                        .setTitle('➖ Remover Usuário do Ticket')
-                        .setDescription('Selecione o usuário que deseja remover do ticket:')
-                        .setColor(0xFF0000)
+                        .setTitle("➖ Remover Usuário do Ticket")
+                        .setDescription(
+                            "Selecione o usuário que deseja remover do ticket:",
+                        )
+                        .setColor(0xff0000)
                         .setTimestamp();
 
                     await interaction.editReply({
                         embeds: [embed],
                         components: [userRow],
-                        ephemeral: true
+                        ephemeral: true,
                     });
                 } catch (error) {
-                    console.error('Erro ao buscar membros:', error);
+                    console.error("Erro ao buscar membros:", error);
                     await interaction.editReply({
-                        content: '❌ Erro ao buscar membros do servidor!',
-                        ephemeral: true
+                        content: "❌ Erro ao buscar membros do servidor!",
+                        ephemeral: true,
                     });
                 }
             }
 
-            if (selectedAction === 'notify_staff') {
+            if (selectedAction === "notify_staff") {
                 const context = getTicketContext(interaction.channelId);
                 if (!context) {
-                    return interaction.reply({ 
-                        content: '❌ Não foi possível recuperar as informações deste ticket!', 
-                        ephemeral: true 
+                    return interaction.reply({
+                        content:
+                            "❌ Não foi possível recuperar as informações deste ticket!",
+                        ephemeral: true,
                     });
                 }
 
-                const panelConfig = getPanelConfig(context.guildId, context.panelId);
+                const panelConfig = getPanelConfig(
+                    context.guildId,
+                    context.panelId,
+                );
                 if (!panelConfig) {
-                    return interaction.reply({ 
-                        content: '❌ Configuração do painel não encontrada!', 
-                        ephemeral: true 
+                    return interaction.reply({
+                        content: "❌ Configuração do painel não encontrada!",
+                        ephemeral: true,
                     });
                 }
 
-                const mentionRoles = panelConfig.supportRoles && panelConfig.supportRoles.length > 0
-                    ? panelConfig.supportRoles.map(roleId => `<@&${roleId}>`).join(' ')
-                    : (panelConfig.supportRoleId ? `<@&${panelConfig.supportRoleId}>` : '');
+                const mentionRoles =
+                    panelConfig.supportRoles &&
+                    panelConfig.supportRoles.length > 0
+                        ? panelConfig.supportRoles
+                              .map((roleId) => `<@&${roleId}>`)
+                              .join(" ")
+                        : panelConfig.supportRoleId
+                          ? `<@&${panelConfig.supportRoleId}>`
+                          : "";
 
                 if (mentionRoles) {
                     await interaction.channel.send({
-                        content: `🔔 **Notificação da equipe de suporte** ${mentionRoles}\n\nSolicitado por: ${interaction.user}`
+                        content: `🔔 **Notificação da equipe de suporte** ${mentionRoles}\n\nSolicitado por: ${interaction.user}`,
                     });
 
-                    await interaction.reply({ 
-                        content: '✅ Equipe de suporte notificada com sucesso!', 
-                        ephemeral: true 
+                    await interaction.reply({
+                        content: "✅ Equipe de suporte notificada com sucesso!",
+                        ephemeral: true,
                     });
                 } else {
-                    await interaction.reply({ 
-                        content: '❌ Nenhum cargo de suporte configurado para notificar!', 
-                        ephemeral: true 
+                    await interaction.reply({
+                        content:
+                            "❌ Nenhum cargo de suporte configurado para notificar!",
+                        ephemeral: true,
                     });
                 }
             }
         }
 
-        if (interaction.customId === 'select_user_to_add') {
+        if (interaction.customId === "select_user_to_add") {
             const userId = interaction.values[0];
-            
+
             try {
                 const user = await interaction.guild.members.fetch(userId);
-                
+
                 await interaction.channel.permissionOverwrites.create(user, {
                     ViewChannel: true,
                     SendMessages: true,
-                    ReadMessageHistory: true
+                    ReadMessageHistory: true,
                 });
 
                 await interaction.update({
                     content: `✅ Usuário ${user} adicionado ao ticket com sucesso!`,
                     embeds: [],
                     components: [],
-                    ephemeral: true
+                    ephemeral: true,
                 });
 
                 await interaction.channel.send({
-                    content: `➕ ${user} foi adicionado ao ticket por ${interaction.user}`
+                    content: `➕ ${user} foi adicionado ao ticket por ${interaction.user}`,
                 });
             } catch (error) {
-                console.error('Erro ao adicionar usuário:', error);
+                console.error("Erro ao adicionar usuário:", error);
                 await interaction.update({
-                    content: '❌ Erro ao adicionar usuário ao ticket!',
+                    content: "❌ Erro ao adicionar usuário ao ticket!",
                     embeds: [],
                     components: [],
-                    ephemeral: true
+                    ephemeral: true,
                 });
             }
         }
 
-        if (interaction.customId === 'select_user_to_remove') {
+        if (interaction.customId === "select_user_to_remove") {
             const userId = interaction.values[0];
-            
+
             try {
                 const user = await interaction.guild.members.fetch(userId);
-                
+
                 await interaction.channel.permissionOverwrites.delete(user);
 
                 await interaction.update({
                     content: `✅ Usuário ${user} removido do ticket com sucesso!`,
                     embeds: [],
                     components: [],
-                    ephemeral: true
+                    ephemeral: true,
                 });
 
                 await interaction.channel.send({
-                    content: `➖ ${user} foi removido do ticket por ${interaction.user}`
+                    content: `➖ ${user} foi removido do ticket por ${interaction.user}`,
                 });
             } catch (error) {
-                console.error('Erro ao remover usuário:', error);
+                console.error("Erro ao remover usuário:", error);
                 await interaction.update({
-                    content: '❌ Erro ao remover usuário do ticket!',
+                    content: "❌ Erro ao remover usuário do ticket!",
                     embeds: [],
                     components: [],
-                    ephemeral: true
+                    ephemeral: true,
                 });
             }
         }
     }
 
     if (interaction.isStringSelectMenu()) {
-        if (interaction.customId.startsWith('select_setor:')) {
-            const panelId = interaction.customId.split(':')[1];
+        if (interaction.customId.startsWith("select_setor:")) {
+            const panelId = interaction.customId.split(":")[1];
             const panelConfig = getPanelConfig(interaction.guildId, panelId);
 
-            if (!panelConfig || !panelConfig.supportRoleId || !panelConfig.categoryId) {
-                return interaction.reply({ 
-                    content: '❌ Este painel não está configurado corretamente! Peça a um administrador para usar `/selecionar_painel` e `/setup`.', 
-                    ephemeral: true 
+            if (
+                !panelConfig ||
+                !panelConfig.supportRoleId ||
+                !panelConfig.categoryId
+            ) {
+                return interaction.reply({
+                    content:
+                        "❌ Este painel não está configurado corretamente! Peça a um administrador para usar `/selecionar_painel` e `/setup`.",
+                    ephemeral: true,
                 });
             }
 
             const setorSelecionado = interaction.values[0];
-            const sanitizedUsername = sanitizeUsername(interaction.user.username);
+            const sanitizedUsername = sanitizeUsername(
+                interaction.user.username,
+            );
             const ticketChannelName = `ticket-de-${sanitizedUsername}`;
-            
+
             const existingChannel = interaction.guild.channels.cache.find(
-                ch => ch.name === ticketChannelName && ch.type === ChannelType.GuildText
+                (ch) =>
+                    ch.name === ticketChannelName &&
+                    ch.type === ChannelType.GuildText,
             );
 
             if (existingChannel) {
-                return interaction.reply({ 
-                    content: `❌ Você já tem um ticket aberto: ${existingChannel}`, 
-                    ephemeral: true 
+                return interaction.reply({
+                    content: `❌ Você já tem um ticket aberto: ${existingChannel}`,
+                    ephemeral: true,
                 });
             }
 
@@ -2239,45 +2783,48 @@ client.on('interactionCreate', async interaction => {
                 const permissionOverwrites = [
                     {
                         id: interaction.guild.roles.everyone.id,
-                        deny: [PermissionFlagsBits.ViewChannel]
+                        deny: [PermissionFlagsBits.ViewChannel],
                     },
                     {
                         id: interaction.user.id,
                         allow: [
-                            PermissionFlagsBits.ViewChannel, 
-                            PermissionFlagsBits.SendMessages, 
-                            PermissionFlagsBits.ReadMessageHistory
-                        ]
+                            PermissionFlagsBits.ViewChannel,
+                            PermissionFlagsBits.SendMessages,
+                            PermissionFlagsBits.ReadMessageHistory,
+                        ],
                     },
                     {
                         id: client.user.id,
                         allow: [
                             PermissionFlagsBits.ViewChannel,
                             PermissionFlagsBits.SendMessages,
-                            PermissionFlagsBits.ManageChannels
-                        ]
-                    }
+                            PermissionFlagsBits.ManageChannels,
+                        ],
+                    },
                 ];
 
-                if (panelConfig.supportRoles && panelConfig.supportRoles.length > 0) {
-                    panelConfig.supportRoles.forEach(roleId => {
+                if (
+                    panelConfig.supportRoles &&
+                    panelConfig.supportRoles.length > 0
+                ) {
+                    panelConfig.supportRoles.forEach((roleId) => {
                         permissionOverwrites.push({
                             id: roleId,
                             allow: [
-                                PermissionFlagsBits.ViewChannel, 
-                                PermissionFlagsBits.SendMessages, 
-                                PermissionFlagsBits.ReadMessageHistory
-                            ]
+                                PermissionFlagsBits.ViewChannel,
+                                PermissionFlagsBits.SendMessages,
+                                PermissionFlagsBits.ReadMessageHistory,
+                            ],
                         });
                     });
                 } else if (panelConfig.supportRoleId) {
                     permissionOverwrites.push({
                         id: panelConfig.supportRoleId,
                         allow: [
-                            PermissionFlagsBits.ViewChannel, 
-                            PermissionFlagsBits.SendMessages, 
-                            PermissionFlagsBits.ReadMessageHistory
-                        ]
+                            PermissionFlagsBits.ViewChannel,
+                            PermissionFlagsBits.SendMessages,
+                            PermissionFlagsBits.ReadMessageHistory,
+                        ],
                     });
                 }
 
@@ -2285,76 +2832,108 @@ client.on('interactionCreate', async interaction => {
                     name: ticketChannelName,
                     type: ChannelType.GuildText,
                     parent: panelConfig.categoryId,
-                    permissionOverwrites: permissionOverwrites
+                    permissionOverwrites: permissionOverwrites,
                 });
 
                 ticketMetadata.set(ticketChannel.id, {
                     guildId: interaction.guildId,
                     panelId: panelId,
                     userId: interaction.user.id,
-                    channelId: ticketChannel.id
+                    channelId: ticketChannel.id,
                 });
 
                 const ticketEmbed = new EmbedBuilder()
-                    .setTitle('🎫 Ticket - Menu Inicial')
-                    .setDescription('Aguarde a chegada da equipe de suporte para dar continuidade ao atendimento. Enquanto isso, aproveite para nos fornecer mais detalhes sobre o que você precisa.')
-                    .addFields(
-                        { name: '👤 Usuário', value: `${interaction.user} 🎲`, inline: false },
-                        { name: '📄 Motivo', value: setorSelecionado, inline: false },
-                        { name: '👮 Staff', value: 'Ninguém reivindicou esse ticket!', inline: false }
+                    .setTitle("🎫 Ticket - Menu Inicial")
+                    .setDescription(
+                        "Aguarde a chegada da equipe de suporte para dar continuidade ao atendimento. Enquanto isso, aproveite para nos fornecer mais detalhes sobre o que você precisa.",
                     )
-                    .setColor(0x5865F2)
-                    .setFooter({ text: 'Mensagem de: DRAGON STORE' })
+                    .addFields(
+                        {
+                            name: "👤 Usuário",
+                            value: `${interaction.user} 🎲`,
+                            inline: false,
+                        },
+                        {
+                            name: "📄 Motivo",
+                            value: setorSelecionado,
+                            inline: false,
+                        },
+                        {
+                            name: "👮 Staff",
+                            value: "Ninguém reivindicou esse ticket!",
+                            inline: false,
+                        },
+                    )
+                    .setColor(0x5865f2)
+                    .setFooter({ text: "Mensagem de: DRAGON STORE" })
                     .setTimestamp();
 
                 const row = buildTicketControls();
 
-                const mentionRoles = panelConfig.supportRoles && panelConfig.supportRoles.length > 0
-                    ? panelConfig.supportRoles.map(roleId => `<@&${roleId}>`).join(' ')
-                    : `<@&${panelConfig.supportRoleId}>`;
+                const mentionRoles =
+                    panelConfig.supportRoles &&
+                    panelConfig.supportRoles.length > 0
+                        ? panelConfig.supportRoles
+                              .map((roleId) => `<@&${roleId}>`)
+                              .join(" ")
+                        : `<@&${panelConfig.supportRoleId}>`;
 
-                await ticketChannel.send({ 
+                await ticketChannel.send({
                     content: `${interaction.user} ${mentionRoles}`,
-                    embeds: [ticketEmbed], 
-                    components: [row] 
+                    embeds: [ticketEmbed],
+                    components: [row],
                 });
 
                 const goToTicketButton = new ButtonBuilder()
-                    .setLabel('Go to Ticket')
-                    .setEmoji('🔗')
+                    .setLabel("Go to Ticket")
+                    .setEmoji("🔗")
                     .setStyle(ButtonStyle.Link)
-                    .setURL(`https://discord.com/channels/${interaction.guildId}/${ticketChannel.id}`);
+                    .setURL(
+                        `https://discord.com/channels/${interaction.guildId}/${ticketChannel.id}`,
+                    );
 
-                const buttonRow = new ActionRowBuilder().addComponents(goToTicketButton);
+                const buttonRow = new ActionRowBuilder().addComponents(
+                    goToTicketButton,
+                );
 
                 await interaction.editReply({
-                    content: '✅ Your ticket has been created!',
-                    components: [buttonRow]
+                    content: "✅ Your ticket has been created!",
+                    components: [buttonRow],
                 });
 
-                console.log(`✅ Ticket criado: ${ticketChannelName} por ${interaction.user.tag} - Painel: ${panelConfig.name} - Setor: ${setorSelecionado}`);
+                console.log(
+                    `✅ Ticket criado: ${ticketChannelName} por ${interaction.user.tag} - Painel: ${panelConfig.name} - Setor: ${setorSelecionado}`,
+                );
 
                 if (panelConfig.logsChannelId) {
-                    const logsChannel = interaction.guild.channels.cache.get(panelConfig.logsChannelId);
+                    const logsChannel = interaction.guild.channels.cache.get(
+                        panelConfig.logsChannelId,
+                    );
                     if (logsChannel) {
                         const logEmbed = new EmbedBuilder()
-                            .setTitle('📂 Ticket Aberto')
-                            .setDescription(`**Usuário:** ${interaction.user} (${interaction.user.tag})\n**ID:** ${interaction.user.id}\n**Painel:** ${panelConfig.name}\n**Setor:** ${setorSelecionado}\n**Canal:** ${ticketChannel}\n**Horário:** <t:${Math.floor(Date.now() / 1000)}:F>`)
-                            .setColor(0x00FF00)
-                            .setFooter({ text: 'Powered by 7M Store' })
+                            .setTitle("📂 Ticket Aberto")
+                            .setDescription(
+                                `**Usuário:** ${interaction.user} (${interaction.user.tag})\n**ID:** ${interaction.user.id}\n**Painel:** ${panelConfig.name}\n**Setor:** ${setorSelecionado}\n**Canal:** ${ticketChannel}\n**Horário:** <t:${Math.floor(Date.now() / 1000)}:F>`,
+                            )
+                            .setColor(0x00ff00)
+                            .setFooter({ text: "Powered by 7M Store" })
                             .setTimestamp();
-                        
-                        await logsChannel.send({ embeds: [logEmbed] }).catch(err => {
-                            console.error('❌ Erro ao enviar log de ticket aberto:', err);
-                        });
+
+                        await logsChannel
+                            .send({ embeds: [logEmbed] })
+                            .catch((err) => {
+                                console.error(
+                                    "❌ Erro ao enviar log de ticket aberto:",
+                                    err,
+                                );
+                            });
                     }
                 }
-
             } catch (error) {
-                console.error('❌ Erro ao criar ticket:', error);
-                return interaction.followUp({ 
-                    content: `❌ Erro ao criar o ticket: ${error.message}`, 
-                    ephemeral: true 
+                console.error("❌ Erro ao criar ticket:", error);
+                return interaction.followUp({
+                    content: `❌ Erro ao criar o ticket: ${error.message}`,
+                    ephemeral: true,
                 });
             }
         }
@@ -2362,101 +2941,112 @@ client.on('interactionCreate', async interaction => {
 
     // Modal submissions
     if (interaction.isModalSubmit()) {
-        if (interaction.customId === 'modal_notify_user') {
+        if (interaction.customId === "modal_notify_user") {
             const context = getTicketContext(interaction.channelId);
             if (!context) {
-                return interaction.reply({ 
-                    content: '❌ Não foi possível recuperar as informações deste ticket!', 
-                    ephemeral: true 
+                return interaction.reply({
+                    content:
+                        "❌ Não foi possível recuperar as informações deste ticket!",
+                    ephemeral: true,
                 });
             }
 
-            const message = interaction.fields.getTextInputValue('notify_message');
-            
+            const message =
+                interaction.fields.getTextInputValue("notify_message");
+
             try {
                 const user = await client.users.fetch(context.userId);
                 await user.send({
-                    content: `📧 **Mensagem da equipe de suporte:**\n\n${message}\n\n*Ticket: ${interaction.channel.name}*`
+                    content: `📧 **Mensagem da equipe de suporte:**\n\n${message}\n\n*Ticket: ${interaction.channel.name}*`,
                 });
 
-                await interaction.reply({ 
-                    content: `✅ Mensagem enviada com sucesso para ${user.tag}!`, 
-                    ephemeral: true 
+                await interaction.reply({
+                    content: `✅ Mensagem enviada com sucesso para ${user.tag}!`,
+                    ephemeral: true,
                 });
             } catch (error) {
-                console.error('Erro ao enviar DM:', error);
-                await interaction.reply({ 
-                    content: '❌ Não foi possível enviar a mensagem. O usuário pode ter DMs desativadas.', 
-                    ephemeral: true 
+                console.error("Erro ao enviar DM:", error);
+                await interaction.reply({
+                    content:
+                        "❌ Não foi possível enviar a mensagem. O usuário pode ter DMs desativadas.",
+                    ephemeral: true,
                 });
             }
         }
 
-        if (interaction.customId === 'modal_add_user') {
+        if (interaction.customId === "modal_add_user") {
             const context = getTicketContext(interaction.channelId);
             if (!context) {
-                return interaction.reply({ 
-                    content: '❌ Não foi possível recuperar as informações deste ticket!', 
-                    ephemeral: true 
+                return interaction.reply({
+                    content:
+                        "❌ Não foi possível recuperar as informações deste ticket!",
+                    ephemeral: true,
                 });
             }
 
-            const userId = interaction.fields.getTextInputValue('user_id').trim();
-            
+            const userId = interaction.fields
+                .getTextInputValue("user_id")
+                .trim();
+
             try {
                 const member = await interaction.guild.members.fetch(userId);
-                
+
                 const channel = interaction.channel;
-                const currentPermissions = channel.permissionOverwrites.cache.get(userId);
-                
+                const currentPermissions =
+                    channel.permissionOverwrites.cache.get(userId);
+
                 if (currentPermissions) {
-                    return interaction.reply({ 
-                        content: '❌ Este usuário já tem acesso ao ticket!', 
-                        ephemeral: true 
+                    return interaction.reply({
+                        content: "❌ Este usuário já tem acesso ao ticket!",
+                        ephemeral: true,
                     });
                 }
 
                 await channel.permissionOverwrites.create(userId, {
                     ViewChannel: true,
                     SendMessages: true,
-                    ReadMessageHistory: true
+                    ReadMessageHistory: true,
                 });
 
                 await channel.send({
-                    content: `➕ ${member} foi adicionado ao ticket por ${interaction.user}`
+                    content: `➕ ${member} foi adicionado ao ticket por ${interaction.user}`,
                 });
 
-                await interaction.reply({ 
-                    content: `✅ ${member.user.tag} foi adicionado ao ticket com sucesso!`, 
-                    ephemeral: true 
+                await interaction.reply({
+                    content: `✅ ${member.user.tag} foi adicionado ao ticket com sucesso!`,
+                    ephemeral: true,
                 });
             } catch (error) {
-                console.error('Erro ao adicionar usuário:', error);
-                await interaction.reply({ 
-                    content: '❌ Não foi possível adicionar o usuário. Verifique se o ID está correto.', 
-                    ephemeral: true 
+                console.error("Erro ao adicionar usuário:", error);
+                await interaction.reply({
+                    content:
+                        "❌ Não foi possível adicionar o usuário. Verifique se o ID está correto.",
+                    ephemeral: true,
                 });
             }
         }
 
-        if (interaction.customId === 'modal_remove_user') {
+        if (interaction.customId === "modal_remove_user") {
             const context = getTicketContext(interaction.channelId);
             if (!context) {
-                return interaction.reply({ 
-                    content: '❌ Não foi possível recuperar as informações deste ticket!', 
-                    ephemeral: true 
+                return interaction.reply({
+                    content:
+                        "❌ Não foi possível recuperar as informações deste ticket!",
+                    ephemeral: true,
                 });
             }
 
-            const userId = interaction.fields.getTextInputValue('user_id').trim();
-            
+            const userId = interaction.fields
+                .getTextInputValue("user_id")
+                .trim();
+
             if (userId === context.userId) {
-                return interaction.reply({ 
-                    content: '❌ Você não pode remover o criador do ticket!', 
-                    ephemeral: true 
+                return interaction.reply({
+                    content: "❌ Você não pode remover o criador do ticket!",
+                    ephemeral: true,
                 });
             }
-            
+
             try {
                 const member = await interaction.guild.members.fetch(userId);
                 const channel = interaction.channel;
@@ -2464,18 +3054,19 @@ client.on('interactionCreate', async interaction => {
                 await channel.permissionOverwrites.delete(userId);
 
                 await channel.send({
-                    content: `➖ ${member} foi removido do ticket por ${interaction.user}`
+                    content: `➖ ${member} foi removido do ticket por ${interaction.user}`,
                 });
 
-                await interaction.reply({ 
-                    content: `✅ ${member.user.tag} foi removido do ticket com sucesso!`, 
-                    ephemeral: true 
+                await interaction.reply({
+                    content: `✅ ${member.user.tag} foi removido do ticket com sucesso!`,
+                    ephemeral: true,
                 });
             } catch (error) {
-                console.error('Erro ao remover usuário:', error);
-                await interaction.reply({ 
-                    content: '❌ Não foi possível remover o usuário. Verifique se o ID está correto.', 
-                    ephemeral: true 
+                console.error("Erro ao remover usuário:", error);
+                await interaction.reply({
+                    content:
+                        "❌ Não foi possível remover o usuário. Verifique se o ID está correto.",
+                    ephemeral: true,
                 });
             }
         }
@@ -2485,7 +3076,7 @@ client.on('interactionCreate', async interaction => {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
     res.send(`
         <html>
             <head>
@@ -2525,9 +3116,9 @@ app.get('/', (req, res) => {
                 <div class="container">
                     <h1>🤖 Discord Ticket Bot - Multi-Painel</h1>
                     <div class="status">✅ Sistema Online!</div>
-                    <div class="info">Bot Status: ${client.user ? 'Online ✅' : 'Offline ❌'}</div>
-                    <div class="info">Bot Name: ${client.user ? client.user.tag : 'N/A'}</div>
-                    <div class="info">Servers: ${client.guilds ? client.guilds.cache.size : '0'}</div>
+                    <div class="info">Bot Status: ${client.user ? "Online ✅" : "Offline ❌"}</div>
+                    <div class="info">Bot Name: ${client.user ? client.user.tag : "N/A"}</div>
+                    <div class="info">Servers: ${client.guilds ? client.guilds.cache.size : "0"}</div>
                     <div class="info">Uptime: ${process.uptime().toFixed(0)}s</div>
                     <p style="margin-top: 30px; color: #8b949e;">Powered by 7M Store</p>
                 </div>
@@ -2536,29 +3127,33 @@ app.get('/', (req, res) => {
     `);
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, "0.0.0.0", () => {
     console.log(`🌐 Servidor HTTP rodando na porta ${PORT}`);
     console.log(`🔗 Keep-alive ativado para evitar hibernação`);
-}).on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-        console.warn(`⚠️  Porta ${PORT} já está em uso. Tentando porta alternativa...`);
+}).on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+        console.warn(
+            `⚠️  Porta ${PORT} já está em uso. Tentando porta alternativa...`,
+        );
         const altPort = PORT + 1;
-        app.listen(altPort, '0.0.0.0', () => {
+        app.listen(altPort, "0.0.0.0", () => {
             console.log(`🌐 Servidor HTTP rodando na porta ${altPort}`);
         });
     } else {
-        console.error('❌ Erro no servidor HTTP:', err);
+        console.error("❌ Erro no servidor HTTP:", err);
     }
 });
 
 if (!checkEnvironmentVariables()) {
-    console.error('⚠️  Bot não pode iniciar sem as variáveis de ambiente!');
-    console.error('   Crie um arquivo .env com TOKEN e CLIENT_ID do seu bot Discord.');
+    console.error("⚠️  Bot não pode iniciar sem as variáveis de ambiente!");
+    console.error(
+        "   Crie um arquivo .env com TOKEN e CLIENT_ID do seu bot Discord.",
+    );
     process.exit(1);
 }
 
-client.login(process.env.TOKEN).catch(err => {
-    console.error('❌ Erro ao fazer login no Discord:', err);
-    console.error('⚠️  Verifique se o TOKEN no arquivo .env está correto!');
+client.login(process.env.TOKEN).catch((err) => {
+    console.error("❌ Erro ao fazer login no Discord:", err);
+    console.error("⚠️  Verifique se o TOKEN no arquivo .env está correto!");
     process.exit(1);
 });
