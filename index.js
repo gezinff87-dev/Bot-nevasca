@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, PermissionFlagsBits, ChannelType, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, PermissionFlagsBits, ChannelType, REST, Routes, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -17,6 +17,7 @@ let config = {};
 
 const userPanelContext = new Map();
 const ticketClaimedBy = new Map();
+const ticketMetadata = new Map();
 
 function loadConfig() {
     try {
@@ -137,6 +138,37 @@ function validateCustomId(customId) {
         return { valid: false, error: 'O ID personalizado não pode ter mais de 100 caracteres!' };
     }
     return { valid: true };
+}
+
+function buildTicketControls() {
+    const closeButton = new ButtonBuilder()
+        .setCustomId('fechar_ticket')
+        .setLabel('Fechar')
+        .setEmoji('🗑️')
+        .setStyle(ButtonStyle.Danger);
+
+    const claimButton = new ButtonBuilder()
+        .setCustomId('reivindicar_ticket')
+        .setLabel('Reivindicar')
+        .setEmoji('🙋')
+        .setStyle(ButtonStyle.Secondary);
+
+    const archiveButton = new ButtonBuilder()
+        .setCustomId('arquivar_ticket')
+        .setLabel('Arquivar Ticket')
+        .setEmoji('📁')
+        .setStyle(ButtonStyle.Secondary);
+
+    const settingsButton = new ButtonBuilder()
+        .setCustomId('ticket_settings')
+        .setEmoji('⚙️')
+        .setStyle(ButtonStyle.Secondary);
+
+    return new ActionRowBuilder().addComponents(closeButton, claimButton, archiveButton, settingsButton);
+}
+
+function getTicketContext(channelId) {
+    return ticketMetadata.get(channelId) || null;
 }
 
 function validateSelectMenuOption(label, value, description) {
@@ -1641,6 +1673,13 @@ client.on('interactionCreate', async interaction => {
                     permissionOverwrites: permissionOverwrites
                 });
 
+                ticketMetadata.set(ticketChannel.id, {
+                    guildId: interaction.guildId,
+                    panelId: panelId,
+                    userId: interaction.user.id,
+                    channelId: ticketChannel.id
+                });
+
                 const ticketEmbed = new EmbedBuilder()
                     .setTitle('🎫 Ticket - Menu Inicial')
                     .setDescription('Aguarde a chegada da equipe de suporte para dar continuidade ao atendimento. Enquanto isso, aproveite para nos fornecer mais detalhes sobre o que você precisa.')
@@ -1653,25 +1692,7 @@ client.on('interactionCreate', async interaction => {
                     .setFooter({ text: 'Mensagem de: DRAGON STORE' })
                     .setTimestamp();
 
-                const closeButton = new ButtonBuilder()
-                    .setCustomId('fechar_ticket')
-                    .setLabel('Fechar')
-                    .setEmoji('🗑️')
-                    .setStyle(ButtonStyle.Danger);
-
-                const claimButton = new ButtonBuilder()
-                    .setCustomId('reivindicar_ticket')
-                    .setLabel('Reivindicar')
-                    .setEmoji('🙋')
-                    .setStyle(ButtonStyle.Secondary);
-
-                const archiveButton = new ButtonBuilder()
-                    .setCustomId('arquivar_ticket')
-                    .setLabel('Arquivar Ticket')
-                    .setEmoji('📁')
-                    .setStyle(ButtonStyle.Secondary);
-
-                const row = new ActionRowBuilder().addComponents(closeButton, claimButton, archiveButton);
+                const row = buildTicketControls();
 
                 const mentionRoles = panelConfig.supportRoles && panelConfig.supportRoles.length > 0
                     ? panelConfig.supportRoles.map(roleId => `<@&${roleId}>`).join(' ')
@@ -1888,6 +1909,180 @@ client.on('interactionCreate', async interaction => {
                 console.error('❌ Erro ao arquivar ticket:', error);
             }
         }
+
+        // Ticket gear interactions
+        if (interaction.customId === 'ticket_settings') {
+            const context = getTicketContext(interaction.channelId);
+            
+            if (!context) {
+                return interaction.reply({ 
+                    content: '❌ Não foi possível recuperar as informações deste ticket!', 
+                    ephemeral: true 
+                });
+            }
+
+            const panelConfig = getPanelConfig(context.guildId, context.panelId);
+            if (!panelConfig) {
+                return interaction.reply({ 
+                    content: '❌ Configuração do painel não encontrada!', 
+                    ephemeral: true 
+                });
+            }
+
+            let hasSupport = false;
+            if (panelConfig.supportRoles && panelConfig.supportRoles.length > 0) {
+                hasSupport = panelConfig.supportRoles.some(roleId => 
+                    interaction.member.roles.cache.has(roleId)
+                );
+            } else if (panelConfig.supportRoleId) {
+                hasSupport = interaction.member.roles.cache.has(panelConfig.supportRoleId);
+            }
+
+            if (!hasSupport && !interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+                return interaction.reply({ 
+                    content: '❌ Apenas membros da equipe de suporte podem acessar as configurações do ticket!', 
+                    ephemeral: true 
+                });
+            }
+
+            const settingsEmbed = new EmbedBuilder()
+                .setTitle('⚙️ Configurações do Ticket')
+                .setDescription('Selecione uma ação abaixo:')
+                .setColor(0x5865F2)
+                .setTimestamp();
+
+            const notifyUserButton = new ButtonBuilder()
+                .setCustomId('ticket_notify_user')
+                .setLabel('Notificar Usuário')
+                .setEmoji('📧')
+                .setStyle(ButtonStyle.Primary);
+
+            const addUserButton = new ButtonBuilder()
+                .setCustomId('ticket_add_user')
+                .setLabel('Adicionar Usuário')
+                .setEmoji('➕')
+                .setStyle(ButtonStyle.Success);
+
+            const removeUserButton = new ButtonBuilder()
+                .setCustomId('ticket_remove_user')
+                .setLabel('Remover Usuário')
+                .setEmoji('➖')
+                .setStyle(ButtonStyle.Danger);
+
+            const notifyStaffButton = new ButtonBuilder()
+                .setCustomId('ticket_notify_staff')
+                .setLabel('Notificar Staff')
+                .setEmoji('🔔')
+                .setStyle(ButtonStyle.Secondary);
+
+            const settingsRow = new ActionRowBuilder().addComponents(
+                notifyUserButton, 
+                addUserButton, 
+                removeUserButton, 
+                notifyStaffButton
+            );
+
+            return interaction.reply({ 
+                embeds: [settingsEmbed], 
+                components: [settingsRow], 
+                ephemeral: true 
+            });
+        }
+
+        if (interaction.customId === 'ticket_notify_user') {
+            const modal = new ModalBuilder()
+                .setCustomId('modal_notify_user')
+                .setTitle('Notificar Usuário');
+
+            const messageInput = new TextInputBuilder()
+                .setCustomId('notify_message')
+                .setLabel('Mensagem para enviar ao usuário')
+                .setStyle(TextInputStyle.Paragraph)
+                .setPlaceholder('Digite a mensagem que será enviada por DM ao criador do ticket...')
+                .setRequired(true)
+                .setMaxLength(2000);
+
+            const row = new ActionRowBuilder().addComponents(messageInput);
+            modal.addComponents(row);
+
+            await interaction.showModal(modal);
+        }
+
+        if (interaction.customId === 'ticket_add_user') {
+            const modal = new ModalBuilder()
+                .setCustomId('modal_add_user')
+                .setTitle('Adicionar Usuário ao Ticket');
+
+            const userInput = new TextInputBuilder()
+                .setCustomId('user_id')
+                .setLabel('ID do usuário')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Cole o ID do usuário aqui...')
+                .setRequired(true)
+                .setMaxLength(20);
+
+            const row = new ActionRowBuilder().addComponents(userInput);
+            modal.addComponents(row);
+
+            await interaction.showModal(modal);
+        }
+
+        if (interaction.customId === 'ticket_remove_user') {
+            const modal = new ModalBuilder()
+                .setCustomId('modal_remove_user')
+                .setTitle('Remover Usuário do Ticket');
+
+            const userInput = new TextInputBuilder()
+                .setCustomId('user_id')
+                .setLabel('ID do usuário')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Cole o ID do usuário aqui...')
+                .setRequired(true)
+                .setMaxLength(20);
+
+            const row = new ActionRowBuilder().addComponents(userInput);
+            modal.addComponents(row);
+
+            await interaction.showModal(modal);
+        }
+
+        if (interaction.customId === 'ticket_notify_staff') {
+            const context = getTicketContext(interaction.channelId);
+            if (!context) {
+                return interaction.reply({ 
+                    content: '❌ Não foi possível recuperar as informações deste ticket!', 
+                    ephemeral: true 
+                });
+            }
+
+            const panelConfig = getPanelConfig(context.guildId, context.panelId);
+            if (!panelConfig) {
+                return interaction.reply({ 
+                    content: '❌ Configuração do painel não encontrada!', 
+                    ephemeral: true 
+                });
+            }
+
+            const mentionRoles = panelConfig.supportRoles && panelConfig.supportRoles.length > 0
+                ? panelConfig.supportRoles.map(roleId => `<@&${roleId}>`).join(' ')
+                : (panelConfig.supportRoleId ? `<@&${panelConfig.supportRoleId}>` : '');
+
+            if (mentionRoles) {
+                await interaction.channel.send({
+                    content: `🔔 **Notificação da equipe de suporte** ${mentionRoles}\n\nSolicitado por: ${interaction.user}`
+                });
+
+                await interaction.reply({ 
+                    content: '✅ Equipe de suporte notificada com sucesso!', 
+                    ephemeral: true 
+                });
+            } else {
+                await interaction.reply({ 
+                    content: '❌ Nenhum cargo de suporte configurado para notificar!', 
+                    ephemeral: true 
+                });
+            }
+        }
     }
 
     if (interaction.isStringSelectMenu()) {
@@ -1972,6 +2167,13 @@ client.on('interactionCreate', async interaction => {
                     permissionOverwrites: permissionOverwrites
                 });
 
+                ticketMetadata.set(ticketChannel.id, {
+                    guildId: interaction.guildId,
+                    panelId: panelId,
+                    userId: interaction.user.id,
+                    channelId: ticketChannel.id
+                });
+
                 const ticketEmbed = new EmbedBuilder()
                     .setTitle('🎫 Ticket - Menu Inicial')
                     .setDescription('Aguarde a chegada da equipe de suporte para dar continuidade ao atendimento. Enquanto isso, aproveite para nos fornecer mais detalhes sobre o que você precisa.')
@@ -1984,25 +2186,7 @@ client.on('interactionCreate', async interaction => {
                     .setFooter({ text: 'Mensagem de: DRAGON STORE' })
                     .setTimestamp();
 
-                const closeButton = new ButtonBuilder()
-                    .setCustomId('fechar_ticket')
-                    .setLabel('Fechar')
-                    .setEmoji('🗑️')
-                    .setStyle(ButtonStyle.Danger);
-
-                const claimButton = new ButtonBuilder()
-                    .setCustomId('reivindicar_ticket')
-                    .setLabel('Reivindicar')
-                    .setEmoji('🙋')
-                    .setStyle(ButtonStyle.Secondary);
-
-                const archiveButton = new ButtonBuilder()
-                    .setCustomId('arquivar_ticket')
-                    .setLabel('Arquivar Ticket')
-                    .setEmoji('📁')
-                    .setStyle(ButtonStyle.Secondary);
-
-                const row = new ActionRowBuilder().addComponents(closeButton, claimButton, archiveButton);
+                const row = buildTicketControls();
 
                 const mentionRoles = panelConfig.supportRoles && panelConfig.supportRoles.length > 0
                     ? panelConfig.supportRoles.map(roleId => `<@&${roleId}>`).join(' ')
@@ -2049,6 +2233,127 @@ client.on('interactionCreate', async interaction => {
                 console.error('❌ Erro ao criar ticket:', error);
                 return interaction.followUp({ 
                     content: `❌ Erro ao criar o ticket: ${error.message}`, 
+                    ephemeral: true 
+                });
+            }
+        }
+    }
+
+    // Modal submissions
+    if (interaction.isModalSubmit()) {
+        if (interaction.customId === 'modal_notify_user') {
+            const context = getTicketContext(interaction.channelId);
+            if (!context) {
+                return interaction.reply({ 
+                    content: '❌ Não foi possível recuperar as informações deste ticket!', 
+                    ephemeral: true 
+                });
+            }
+
+            const message = interaction.fields.getTextInputValue('notify_message');
+            
+            try {
+                const user = await client.users.fetch(context.userId);
+                await user.send({
+                    content: `📧 **Mensagem da equipe de suporte:**\n\n${message}\n\n*Ticket: ${interaction.channel.name}*`
+                });
+
+                await interaction.reply({ 
+                    content: `✅ Mensagem enviada com sucesso para ${user.tag}!`, 
+                    ephemeral: true 
+                });
+            } catch (error) {
+                console.error('Erro ao enviar DM:', error);
+                await interaction.reply({ 
+                    content: '❌ Não foi possível enviar a mensagem. O usuário pode ter DMs desativadas.', 
+                    ephemeral: true 
+                });
+            }
+        }
+
+        if (interaction.customId === 'modal_add_user') {
+            const context = getTicketContext(interaction.channelId);
+            if (!context) {
+                return interaction.reply({ 
+                    content: '❌ Não foi possível recuperar as informações deste ticket!', 
+                    ephemeral: true 
+                });
+            }
+
+            const userId = interaction.fields.getTextInputValue('user_id').trim();
+            
+            try {
+                const member = await interaction.guild.members.fetch(userId);
+                
+                const channel = interaction.channel;
+                const currentPermissions = channel.permissionOverwrites.cache.get(userId);
+                
+                if (currentPermissions) {
+                    return interaction.reply({ 
+                        content: '❌ Este usuário já tem acesso ao ticket!', 
+                        ephemeral: true 
+                    });
+                }
+
+                await channel.permissionOverwrites.create(userId, {
+                    ViewChannel: true,
+                    SendMessages: true,
+                    ReadMessageHistory: true
+                });
+
+                await channel.send({
+                    content: `➕ ${member} foi adicionado ao ticket por ${interaction.user}`
+                });
+
+                await interaction.reply({ 
+                    content: `✅ ${member.user.tag} foi adicionado ao ticket com sucesso!`, 
+                    ephemeral: true 
+                });
+            } catch (error) {
+                console.error('Erro ao adicionar usuário:', error);
+                await interaction.reply({ 
+                    content: '❌ Não foi possível adicionar o usuário. Verifique se o ID está correto.', 
+                    ephemeral: true 
+                });
+            }
+        }
+
+        if (interaction.customId === 'modal_remove_user') {
+            const context = getTicketContext(interaction.channelId);
+            if (!context) {
+                return interaction.reply({ 
+                    content: '❌ Não foi possível recuperar as informações deste ticket!', 
+                    ephemeral: true 
+                });
+            }
+
+            const userId = interaction.fields.getTextInputValue('user_id').trim();
+            
+            if (userId === context.userId) {
+                return interaction.reply({ 
+                    content: '❌ Você não pode remover o criador do ticket!', 
+                    ephemeral: true 
+                });
+            }
+            
+            try {
+                const member = await interaction.guild.members.fetch(userId);
+                const channel = interaction.channel;
+
+                await channel.permissionOverwrites.delete(userId);
+
+                await channel.send({
+                    content: `➖ ${member} foi removido do ticket por ${interaction.user}`
+                });
+
+                await interaction.reply({ 
+                    content: `✅ ${member.user.tag} foi removido do ticket com sucesso!`, 
+                    ephemeral: true 
+                });
+            } catch (error) {
+                console.error('Erro ao remover usuário:', error);
+                await interaction.reply({ 
+                    content: '❌ Não foi possível remover o usuário. Verifique se o ID está correto.', 
                     ephemeral: true 
                 });
             }
