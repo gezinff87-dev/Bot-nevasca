@@ -2492,46 +2492,50 @@ client.on("interactionCreate", async (interaction) => {
                     .setColor(0x5865f2)
                     .setTimestamp();
 
-                const settingsSelectMenu = new StringSelectMenuBuilder()
-                    .setCustomId("ticket_settings_menu")
-                    .setPlaceholder("Selecione uma ação abaixo:")
-                    .addOptions([
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel("Notificar Usuário")
-                        .setDescription(
-                            "Enviar uma notificação ao criador do ticket",
-                        )
-                        .setValue("notify_user")
-                        .setEmoji("📧"),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel("Adicionar Usuário")
-                        .setDescription("Adicionar um usuário ao ticket")
-                        .setValue("add_user")
-                        .setEmoji("➕"),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel("Remover Usuário")
-                        .setDescription("Remover um usuário do ticket")
-                        .setValue("remove_user")
-                        .setEmoji("➖"),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel("Notificar Staff")
-                        .setDescription("Notificar a equipe de suporte")
-                        .setValue("notify_staff")
-                        .setEmoji("🔔"),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel("Desistir do Ticket")
-                        .setDescription("Desistir de atender este ticket")
-                        .setValue("unclaim_ticket")
-                        .setEmoji("🚫"),
-                ]);
+                const notifyUserButton = new ButtonBuilder()
+                    .setCustomId("ticket_notify_user")
+                    .setLabel("Notificar Usuário")
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji("📧");
 
-            const settingsRow = new ActionRowBuilder().addComponents(
-                settingsSelectMenu,
-            );
+                const addUserButton = new ButtonBuilder()
+                    .setCustomId("ticket_add_user")
+                    .setLabel("Adicionar Usuário")
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji("➕");
+
+                const removeUserButton = new ButtonBuilder()
+                    .setCustomId("ticket_remove_user")
+                    .setLabel("Remover Usuário")
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji("➖");
+
+                const notifyStaffButton = new ButtonBuilder()
+                    .setCustomId("ticket_notify_staff")
+                    .setLabel("Notificar Staff")
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji("🔔");
+
+                const unclaimButton = new ButtonBuilder()
+                    .setCustomId("ticket_unclaim")
+                    .setLabel("Desistir do Ticket")
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji("🚫");
+
+                const settingsRow1 = new ActionRowBuilder().addComponents(
+                    notifyUserButton,
+                    addUserButton,
+                    removeUserButton
+                );
+
+                const settingsRow2 = new ActionRowBuilder().addComponents(
+                    notifyStaffButton,
+                    unclaimButton
+                );
 
                 return interaction.reply({
                     embeds: [settingsEmbed],
-                    components: [settingsRow],
+                    components: [settingsRow1, settingsRow2],
                     ephemeral: true,
                 });
             } catch (error) {
@@ -2547,29 +2551,28 @@ client.on("interactionCreate", async (interaction) => {
             }
         }
 
-        if (interaction.customId === "ticket_settings_menu") {
-            const selectedAction = interaction.values[0];
+        if (interaction.customId === "ticket_notify_user") {
+            const modal = new ModalBuilder()
+                .setCustomId("modal_notify_user")
+                .setTitle("Notificar Usuário");
 
-            if (selectedAction === "notify_user") {
-                const modal = new ModalBuilder()
-                    .setCustomId("modal_notify_user")
-                    .setTitle("Notificar Usuário");
+            const messageInput = new TextInputBuilder()
+                .setCustomId("notify_message")
+                .setLabel("Mensagem para enviar ao usuário")
+                .setStyle(TextInputStyle.Paragraph)
+                .setPlaceholder(
+                    "Digite a mensagem que será enviada por DM ao criador do ticket...",
+                )
+                .setRequired(true)
+                .setMaxLength(2000);
 
-                const messageInput = new TextInputBuilder()
-                    .setCustomId("notify_message")
-                    .setLabel("Mensagem para enviar ao usuário")
-                    .setStyle(TextInputStyle.Paragraph)
-                    .setPlaceholder(
-                        "Digite a mensagem que será enviada por DM ao criador do ticket...",
-                    )
-                    .setRequired(true)
-                    .setMaxLength(2000);
+            const row = new ActionRowBuilder().addComponents(messageInput);
+            modal.addComponents(row);
 
-                const row = new ActionRowBuilder().addComponents(messageInput);
-                modal.addComponents(row);
+            return await interaction.showModal(modal);
+        }
 
-                return await interaction.showModal(modal);
-            } else if (selectedAction === "add_user") {
+        if (interaction.customId === "ticket_add_user") {
                 await interaction.deferReply({ ephemeral: true });
 
                 try {
@@ -2617,7 +2620,9 @@ client.on("interactionCreate", async (interaction) => {
                         content: "❌ Erro ao buscar membros do servidor!",
                     });
                 }
-            } else if (selectedAction === "remove_user") {
+        }
+
+        if (interaction.customId === "ticket_remove_user") {
                 await interaction.deferReply({ ephemeral: true });
 
                 try {
@@ -2665,7 +2670,9 @@ client.on("interactionCreate", async (interaction) => {
                         content: "❌ Erro ao buscar membros do servidor!",
                     });
                 }
-            } else if (selectedAction === "notify_staff") {
+        }
+
+        if (interaction.customId === "ticket_notify_staff") {
                 await interaction.deferReply({ ephemeral: true });
 
                 const context = getTicketContext(interaction.channelId);
@@ -2710,7 +2717,9 @@ client.on("interactionCreate", async (interaction) => {
                             "❌ Nenhum cargo de suporte configurado para notificar!",
                     });
                 }
-            } else if (selectedAction === "unclaim_ticket") {
+        }
+
+        if (interaction.customId === "ticket_unclaim") {
                 await interaction.deferReply({ ephemeral: true });
 
                 const channel = interaction.channel;
@@ -2788,21 +2797,15 @@ client.on("interactionCreate", async (interaction) => {
                         content: `🚫 ${interaction.user} desistiu de atender este ticket.\n\nO ticket está disponível para ser reivindicado por outro membro da equipe.`,
                     });
 
-                    return await interaction.editReply({
-                        content:
-                            "✅ Você desistiu deste ticket com sucesso! Outro membro da equipe pode reivindicá-lo agora.",
-                    });
-                } catch (error) {
-                    console.error("Erro ao desistir do ticket:", error);
-                    return await interaction.editReply({
-                        content:
-                            "❌ Erro ao atualizar o ticket. A mensagem de controle pode ter sido deletada.",
-                    });
-                }
-            } else {
-                return await interaction.reply({
-                    content: "❌ Opção inválida selecionada!",
-                    ephemeral: true,
+                return await interaction.editReply({
+                    content:
+                        "✅ Você desistiu deste ticket com sucesso! Outro membro da equipe pode reivindicá-lo agora.",
+                });
+            } catch (error) {
+                console.error("Erro ao desistir do ticket:", error);
+                return await interaction.editReply({
+                    content:
+                        "❌ Erro ao atualizar o ticket. A mensagem de controle pode ter sido deletada.",
                 });
             }
         }
