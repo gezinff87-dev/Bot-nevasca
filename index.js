@@ -2573,41 +2573,103 @@ client.on("interactionCreate", async (interaction) => {
         }
 
         if (interaction.customId === "ticket_add_user") {
-            const modal = new ModalBuilder()
-                .setCustomId("modal_add_user")
-                .setTitle("Adicionar Usuário ao Ticket");
+            try {
+                const members = await interaction.guild.members.fetch();
+                const userOptions = members
+                    .filter((member) => !member.user.bot)
+                    .map((member) => ({
+                        label: member.user.username.substring(0, 100),
+                        description: `ID: ${member.user.id}`,
+                        value: member.user.id,
+                    }))
+                    .slice(0, 25);
 
-            const userInput = new TextInputBuilder()
-                .setCustomId("user_mention")
-                .setLabel("Mencione o usuário (@usuario)")
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder("@usuario ou ID do usuário")
-                .setRequired(true)
-                .setMaxLength(100);
+                if (userOptions.length === 0) {
+                    return interaction.reply({
+                        content: "❌ Nenhum usuário disponível para adicionar!",
+                        ephemeral: true,
+                    });
+                }
 
-            const row = new ActionRowBuilder().addComponents(userInput);
-            modal.addComponents(row);
+                const userSelectMenu = new StringSelectMenuBuilder()
+                    .setCustomId("select_user_to_add")
+                    .setPlaceholder("Selecione o usuário para adicionar")
+                    .addOptions(userOptions);
 
-            return await interaction.showModal(modal);
+                const userRow = new ActionRowBuilder().addComponents(
+                    userSelectMenu,
+                );
+
+                const embed = new EmbedBuilder()
+                    .setTitle("➕ Adicionar Usuário ao Ticket")
+                    .setDescription(
+                        "Selecione o usuário que deseja adicionar ao ticket:",
+                    )
+                    .setColor(0x00ff00)
+                    .setTimestamp();
+
+                return await interaction.reply({
+                    embeds: [embed],
+                    components: [userRow],
+                    ephemeral: true,
+                });
+            } catch (error) {
+                console.error("Erro ao buscar membros:", error);
+                return await interaction.reply({
+                    content: "❌ Erro ao buscar membros do servidor!",
+                    ephemeral: true,
+                });
+            }
         }
 
         if (interaction.customId === "ticket_remove_user") {
-            const modal = new ModalBuilder()
-                .setCustomId("modal_remove_user")
-                .setTitle("Remover Usuário do Ticket");
+            try {
+                const members = await interaction.guild.members.fetch();
+                const userOptions = members
+                    .filter((member) => !member.user.bot)
+                    .map((member) => ({
+                        label: member.user.username.substring(0, 100),
+                        description: `ID: ${member.user.id}`,
+                        value: member.user.id,
+                    }))
+                    .slice(0, 25);
 
-            const userInput = new TextInputBuilder()
-                .setCustomId("user_mention")
-                .setLabel("Mencione o usuário (@usuario)")
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder("@usuario ou ID do usuário")
-                .setRequired(true)
-                .setMaxLength(100);
+                if (userOptions.length === 0) {
+                    return interaction.reply({
+                        content: "❌ Nenhum usuário disponível para remover!",
+                        ephemeral: true,
+                    });
+                }
 
-            const row = new ActionRowBuilder().addComponents(userInput);
-            modal.addComponents(row);
+                const userSelectMenu = new StringSelectMenuBuilder()
+                    .setCustomId("select_user_to_remove")
+                    .setPlaceholder("Selecione o usuário para remover")
+                    .addOptions(userOptions);
 
-            return await interaction.showModal(modal);
+                const userRow = new ActionRowBuilder().addComponents(
+                    userSelectMenu,
+                );
+
+                const embed = new EmbedBuilder()
+                    .setTitle("➖ Remover Usuário do Ticket")
+                    .setDescription(
+                        "Selecione o usuário que deseja remover do ticket:",
+                    )
+                    .setColor(0xff0000)
+                    .setTimestamp();
+
+                return await interaction.reply({
+                    embeds: [embed],
+                    components: [userRow],
+                    ephemeral: true,
+                });
+            } catch (error) {
+                console.error("Erro ao buscar membros:", error);
+                return await interaction.reply({
+                    content: "❌ Erro ao buscar membros do servidor!",
+                    ephemeral: true,
+                });
+            }
         }
 
         if (interaction.customId === "ticket_notify_staff") {
@@ -2736,6 +2798,56 @@ client.on("interactionCreate", async (interaction) => {
                 return await interaction.editReply({
                     content:
                         "❌ Erro ao atualizar o ticket. A mensagem de controle pode ter sido deletada.",
+                });
+            }
+        }
+
+        if (interaction.customId === "select_user_to_add") {
+            const userId = interaction.values[0];
+
+            try {
+                const user = await interaction.guild.members.fetch(userId);
+
+                await interaction.channel.permissionOverwrites.create(user, {
+                    ViewChannel: true,
+                    SendMessages: true,
+                    ReadMessageHistory: true,
+                });
+
+                await interaction.update({
+                    content: `✅ Usuário ${user} adicionado ao ticket com sucesso!`,
+                    embeds: [],
+                    components: [],
+                });
+            } catch (error) {
+                console.error("Erro ao adicionar usuário:", error);
+                await interaction.update({
+                    content: "❌ Erro ao adicionar usuário ao ticket!",
+                    embeds: [],
+                    components: [],
+                });
+            }
+        }
+
+        if (interaction.customId === "select_user_to_remove") {
+            const userId = interaction.values[0];
+
+            try {
+                const user = await interaction.guild.members.fetch(userId);
+
+                await interaction.channel.permissionOverwrites.delete(user);
+
+                await interaction.update({
+                    content: `✅ Usuário ${user} removido do ticket com sucesso!`,
+                    embeds: [],
+                    components: [],
+                });
+            } catch (error) {
+                console.error("Erro ao remover usuário:", error);
+                await interaction.update({
+                    content: "❌ Erro ao remover usuário do ticket!",
+                    embeds: [],
+                    components: [],
                 });
             }
         }
@@ -2979,106 +3091,6 @@ client.on("interactionCreate", async (interaction) => {
             }
         }
 
-        if (interaction.customId === "modal_add_user") {
-            const context = getTicketContext(interaction.channelId);
-            if (!context) {
-                return interaction.reply({
-                    content:
-                        "❌ Não foi possível recuperar as informações deste ticket!",
-                    ephemeral: true,
-                });
-            }
-
-            let userInput = interaction.fields
-                .getTextInputValue("user_mention")
-                .trim();
-
-            let userId = userInput;
-            const mentionMatch = userInput.match(/<@!?(\d+)>/);
-            if (mentionMatch) {
-                userId = mentionMatch[1];
-            }
-
-            try {
-                const member = await interaction.guild.members.fetch(userId);
-
-                const channel = interaction.channel;
-                const currentPermissions =
-                    channel.permissionOverwrites.cache.get(userId);
-
-                if (currentPermissions) {
-                    return interaction.reply({
-                        content: "❌ Este usuário já tem acesso ao ticket!",
-                        ephemeral: true,
-                    });
-                }
-
-                await channel.permissionOverwrites.create(userId, {
-                    ViewChannel: true,
-                    SendMessages: true,
-                    ReadMessageHistory: true,
-                });
-
-                await interaction.reply({
-                    content: `✅ ${member.user.tag} foi adicionado ao ticket com sucesso!`,
-                    ephemeral: true,
-                });
-            } catch (error) {
-                console.error("Erro ao adicionar usuário:", error);
-                await interaction.reply({
-                    content:
-                        "❌ Não foi possível adicionar o usuário. Verifique se a menção ou ID está correto.",
-                    ephemeral: true,
-                });
-            }
-        }
-
-        if (interaction.customId === "modal_remove_user") {
-            const context = getTicketContext(interaction.channelId);
-            if (!context) {
-                return interaction.reply({
-                    content:
-                        "❌ Não foi possível recuperar as informações deste ticket!",
-                    ephemeral: true,
-                });
-            }
-
-            let userInput = interaction.fields
-                .getTextInputValue("user_mention")
-                .trim();
-
-            let userId = userInput;
-            const mentionMatch = userInput.match(/<@!?(\d+)>/);
-            if (mentionMatch) {
-                userId = mentionMatch[1];
-            }
-
-            if (userId === context.userId) {
-                return interaction.reply({
-                    content: "❌ Você não pode remover o criador do ticket!",
-                    ephemeral: true,
-                });
-            }
-
-            try {
-                const member = await interaction.guild.members.fetch(userId);
-                const channel = interaction.channel;
-
-                await channel.permissionOverwrites.delete(userId);
-
-                await interaction.reply({
-                    content: `✅ ${member.user.tag} foi removido do ticket com sucesso!`,
-                    ephemeral: true,
-                });
-            } catch (error) {
-                console.error("Erro ao remover usuário:", error);
-                await interaction.reply({
-                    content:
-                        "❌ Não foi possível remover o usuário. Verifique se a menção ou ID está correto.",
-                    ephemeral: true,
-                });
-            }
-        }
     }
 });
 
