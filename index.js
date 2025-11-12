@@ -1,3 +1,4 @@
+
 require("dotenv").config();
 const {
     Client,
@@ -2575,42 +2576,49 @@ client.on("interactionCreate", async (interaction) => {
         if (interaction.customId === "ticket_add_user") {
             try {
                 const members = await interaction.guild.members.fetch();
-                const userOptions = members
+                const users = members
                     .filter((member) => !member.user.bot)
-                    .map((member) => ({
-                        label: member.user.username.substring(0, 100),
-                        description: `ID: ${member.user.id}`,
-                        value: member.user.id,
-                    }))
+                    .map((member) => member)
                     .slice(0, 25);
 
-                if (userOptions.length === 0) {
+                if (users.length === 0) {
                     return interaction.reply({
                         content: "❌ Nenhum usuário disponível para adicionar!",
                         ephemeral: true,
                     });
                 }
 
-                const userSelectMenu = new StringSelectMenuBuilder()
-                    .setCustomId("select_user_to_add")
-                    .setPlaceholder("Selecione o usuário para adicionar")
-                    .addOptions(userOptions);
+                const rows = [];
+                let currentRow = new ActionRowBuilder();
+                let buttonCount = 0;
 
-                const userRow = new ActionRowBuilder().addComponents(
-                    userSelectMenu,
-                );
+                users.forEach((member, index) => {
+                    const button = new ButtonBuilder()
+                        .setCustomId(`add_user_${member.user.id}`)
+                        .setLabel(member.user.username.substring(0, 80))
+                        .setStyle(ButtonStyle.Success);
+
+                    currentRow.addComponents(button);
+                    buttonCount++;
+
+                    if (buttonCount === 5 || index === users.length - 1) {
+                        rows.push(currentRow);
+                        currentRow = new ActionRowBuilder();
+                        buttonCount = 0;
+                    }
+                });
 
                 const embed = new EmbedBuilder()
                     .setTitle("➕ Adicionar Usuário ao Ticket")
                     .setDescription(
-                        "Selecione o usuário que deseja adicionar ao ticket:",
+                        "Clique no botão do usuário que deseja adicionar:",
                     )
                     .setColor(0x00ff00)
                     .setTimestamp();
 
                 return await interaction.reply({
                     embeds: [embed],
-                    components: [userRow],
+                    components: rows.slice(0, 5),
                     ephemeral: true,
                 });
             } catch (error) {
@@ -2625,42 +2633,49 @@ client.on("interactionCreate", async (interaction) => {
         if (interaction.customId === "ticket_remove_user") {
             try {
                 const members = await interaction.guild.members.fetch();
-                const userOptions = members
+                const users = members
                     .filter((member) => !member.user.bot)
-                    .map((member) => ({
-                        label: member.user.username.substring(0, 100),
-                        description: `ID: ${member.user.id}`,
-                        value: member.user.id,
-                    }))
+                    .map((member) => member)
                     .slice(0, 25);
 
-                if (userOptions.length === 0) {
+                if (users.length === 0) {
                     return interaction.reply({
                         content: "❌ Nenhum usuário disponível para remover!",
                         ephemeral: true,
                     });
                 }
 
-                const userSelectMenu = new StringSelectMenuBuilder()
-                    .setCustomId("select_user_to_remove")
-                    .setPlaceholder("Selecione o usuário para remover")
-                    .addOptions(userOptions);
+                const rows = [];
+                let currentRow = new ActionRowBuilder();
+                let buttonCount = 0;
 
-                const userRow = new ActionRowBuilder().addComponents(
-                    userSelectMenu,
-                );
+                users.forEach((member, index) => {
+                    const button = new ButtonBuilder()
+                        .setCustomId(`remove_user_${member.user.id}`)
+                        .setLabel(member.user.username.substring(0, 80))
+                        .setStyle(ButtonStyle.Danger);
+
+                    currentRow.addComponents(button);
+                    buttonCount++;
+
+                    if (buttonCount === 5 || index === users.length - 1) {
+                        rows.push(currentRow);
+                        currentRow = new ActionRowBuilder();
+                        buttonCount = 0;
+                    }
+                });
 
                 const embed = new EmbedBuilder()
                     .setTitle("➖ Remover Usuário do Ticket")
                     .setDescription(
-                        "Selecione o usuário que deseja remover do ticket:",
+                        "Clique no botão do usuário que deseja remover:",
                     )
                     .setColor(0xff0000)
                     .setTimestamp();
 
                 return await interaction.reply({
                     embeds: [embed],
-                    components: [userRow],
+                    components: rows.slice(0, 5),
                     ephemeral: true,
                 });
             } catch (error) {
@@ -2802,8 +2817,8 @@ client.on("interactionCreate", async (interaction) => {
             }
         }
 
-        if (interaction.customId === "select_user_to_add") {
-            const userId = interaction.values[0];
+        if (interaction.customId.startsWith("add_user_")) {
+            const userId = interaction.customId.replace("add_user_", "");
 
             try {
                 const user = await interaction.guild.members.fetch(userId);
@@ -2829,8 +2844,8 @@ client.on("interactionCreate", async (interaction) => {
             }
         }
 
-        if (interaction.customId === "select_user_to_remove") {
-            const userId = interaction.values[0];
+        if (interaction.customId.startsWith("remove_user_")) {
+            const userId = interaction.customId.replace("remove_user_", "");
 
             try {
                 const user = await interaction.guild.members.fetch(userId);
