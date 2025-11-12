@@ -2704,12 +2704,8 @@ client.on("interactionCreate", async (interaction) => {
                           : "";
 
                 if (mentionRoles) {
-                    await interaction.channel.send({
-                        content: `🔔 **Notificação da equipe de suporte** ${mentionRoles}\n\nSolicitado por: ${interaction.user}`,
-                    });
-
                     return await interaction.editReply({
-                        content: "✅ Equipe de suporte notificada com sucesso!",
+                        content: `✅ Equipe de suporte notificada!\n\n🔔 **Cargos notificados:** ${mentionRoles}`,
                     });
                 } else {
                     return await interaction.editReply({
@@ -2793,10 +2789,6 @@ client.on("interactionCreate", async (interaction) => {
 
                     ticketClaimedBy.delete(channel.id);
 
-                    await interaction.channel.send({
-                        content: `🚫 ${interaction.user} desistiu de atender este ticket.\n\nO ticket está disponível para ser reivindicado por outro membro da equipe.`,
-                    });
-
                 return await interaction.editReply({
                     content:
                         "✅ Você desistiu deste ticket com sucesso! Outro membro da equipe pode reivindicá-lo agora.",
@@ -2826,11 +2818,6 @@ client.on("interactionCreate", async (interaction) => {
                     content: `✅ Usuário ${user} adicionado ao ticket com sucesso!`,
                     embeds: [],
                     components: [],
-                    ephemeral: true,
-                });
-
-                await interaction.channel.send({
-                    content: `➕ ${user} foi adicionado ao ticket por ${interaction.user}`,
                 });
             } catch (error) {
                 console.error("Erro ao adicionar usuário:", error);
@@ -2838,7 +2825,6 @@ client.on("interactionCreate", async (interaction) => {
                     content: "❌ Erro ao adicionar usuário ao ticket!",
                     embeds: [],
                     components: [],
-                    ephemeral: true,
                 });
             }
         }
@@ -2855,11 +2841,6 @@ client.on("interactionCreate", async (interaction) => {
                     content: `✅ Usuário ${user} removido do ticket com sucesso!`,
                     embeds: [],
                     components: [],
-                    ephemeral: true,
-                });
-
-                await interaction.channel.send({
-                    content: `➖ ${user} foi removido do ticket por ${interaction.user}`,
                 });
             } catch (error) {
                 console.error("Erro ao remover usuário:", error);
@@ -2867,7 +2848,6 @@ client.on("interactionCreate", async (interaction) => {
                     content: "❌ Erro ao remover usuário do ticket!",
                     embeds: [],
                     components: [],
-                    ephemeral: true,
                 });
             }
         }
