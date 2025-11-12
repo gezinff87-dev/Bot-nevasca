@@ -1,4 +1,3 @@
-
 require("dotenv").config();
 const {
     Client,
@@ -2499,18 +2498,6 @@ client.on("interactionCreate", async (interaction) => {
                     .setStyle(ButtonStyle.Secondary)
                     .setEmoji("📧");
 
-                const addUserButton = new ButtonBuilder()
-                    .setCustomId("ticket_add_user")
-                    .setLabel("Adicionar Usuário")
-                    .setStyle(ButtonStyle.Secondary)
-                    .setEmoji("➕");
-
-                const removeUserButton = new ButtonBuilder()
-                    .setCustomId("ticket_remove_user")
-                    .setLabel("Remover Usuário")
-                    .setStyle(ButtonStyle.Secondary)
-                    .setEmoji("➖");
-
                 const notifyStaffButton = new ButtonBuilder()
                     .setCustomId("ticket_notify_staff")
                     .setLabel("Notificar Staff")
@@ -2525,18 +2512,13 @@ client.on("interactionCreate", async (interaction) => {
 
                 const settingsRow1 = new ActionRowBuilder().addComponents(
                     notifyUserButton,
-                    addUserButton,
-                    removeUserButton
-                );
-
-                const settingsRow2 = new ActionRowBuilder().addComponents(
                     notifyStaffButton,
                     unclaimButton
                 );
 
                 return interaction.reply({
                     embeds: [settingsEmbed],
-                    components: [settingsRow1, settingsRow2],
+                    components: [settingsRow1],
                     ephemeral: true,
                 });
             } catch (error) {
