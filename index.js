@@ -2429,7 +2429,6 @@ client.on("interactionCreate", async (interaction) => {
             }
         }
 
-        // Ticket gear interactions
         if (interaction.customId === "ticket_settings") {
             try {
                 const context = getTicketContext(interaction.channelId);
@@ -2513,24 +2512,119 @@ client.on("interactionCreate", async (interaction) => {
                 const settingsRow1 = new ActionRowBuilder().addComponents(
                     notifyUserButton,
                     notifyStaffButton,
-                    unclaimButton
+                    unclaimButton,
+                );
+
+                const addMemberSelect = new StringSelectMenuBuilder()
+                    .setCustomId("ticket_add_member")
+                    .setPlaceholder("➕ Adicionar membro ao ticket")
+                    .setMinValues(1)
+                    .setMaxValues(1);
+
+                const removeMemberSelect = new StringSelectMenuBuilder()
+                    .setCustomId("ticket_remove_member")
+                    .setPlaceholder("➖ Remover membro do ticket")
+                    .setMinValues(1)
+                    .setMaxValues(1);
+
+                try {
+                    const members = await interaction.guild.members.fetch();
+                    const nonBotMembers = members
+                        .filter((member) => !member.user.bot)
+                        .first(25);
+
+                    nonBotMembers.forEach((member) => {
+                        const option = new StringSelectMenuOptionBuilder()
+                            .setLabel(
+                                member.user.username.substring(0, 100) ||
+                                    member.user.tag,
+                            )
+                            .setValue(member.user.id)
+                            .setDescription(
+                                `ID: ${member.user.id.substring(0, 100)}`,
+                            );
+
+                        addMemberSelect.addOptions(option);
+                    });
+
+                    const channelMembers = interaction.channel.permissionOverwrites.cache
+                        .filter(
+                            (perm) =>
+                                perm.type === 1 &&
+                                perm.id !== interaction.guild.roles.everyone.id &&
+                                perm.id !== client.user.id &&
+                                perm.id !== context.userId,
+                        )
+                        .map((perm) => perm.id);
+
+                    if (channelMembers.length > 0) {
+                        channelMembers.slice(0, 25).forEach((memberId) => {
+                            const member = members.get(memberId);
+                            if (member && !member.user.bot) {
+                                const option =
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel(
+                                            member.user.username.substring(
+                                                0,
+                                                100,
+                                            ) || member.user.tag,
+                                        )
+                                        .setValue(member.user.id)
+                                        .setDescription(
+                                            `ID: ${member.user.id.substring(0, 100)}`,
+                                        );
+
+                                removeMemberSelect.addOptions(option);
+                            }
+                        });
+                    } else {
+                        removeMemberSelect.addOptions(
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel("Nenhum membro adicional no ticket")
+                                .setValue("none")
+                                .setDescription("Adicione membros primeiro"),
+                        );
+                    }
+                } catch (error) {
+                    console.error("Erro ao buscar membros:", error);
+                    addMemberSelect.addOptions(
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel("Erro ao carregar membros")
+                            .setValue("error")
+                            .setDescription("Tente novamente mais tarde"),
+                    );
+                    removeMemberSelect.addOptions(
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel("Erro ao carregar membros")
+                            .setValue("error")
+                            .setDescription("Tente novamente mais tarde"),
+                    );
+                }
+
+                const settingsRow2 = new ActionRowBuilder().addComponents(
+                    addMemberSelect,
+                );
+                const settingsRow3 = new ActionRowBuilder().addComponents(
+                    removeMemberSelect,
                 );
 
                 return interaction.reply({
                     embeds: [settingsEmbed],
-                    components: [settingsRow1],
+                    components: [settingsRow1, settingsRow2, settingsRow3],
                     ephemeral: true,
                 });
             } catch (error) {
                 console.error("❌ Erro no menu de configurações:", error);
-                return interaction.reply({
-                    content:
-                        "❌ Erro ao abrir o menu de configurações! Detalhes: " +
-                        error.message,
-                    ephemeral: true,
-                }).catch(() => {
-                    console.error("Não foi possível responder à interação");
-                });
+                return interaction
+                    .reply({
+                        content:
+                            "❌ Erro ao abrir o menu de configurações! Detalhes: " +
+                            error.message,
+                        ephemeral: true,
+                    })
+                    .catch(() => {
+                        console.error("Não foi possível responder à interação");
+                    });
             }
         }
 
@@ -2555,236 +2649,133 @@ client.on("interactionCreate", async (interaction) => {
             return await interaction.showModal(modal);
         }
 
-        if (interaction.customId === "ticket_add_user") {
-            try {
-                const members = await interaction.guild.members.fetch();
-                const users = members
-                    .filter((member) => !member.user.bot)
-                    .map((member) => member)
-                    .slice(0, 25);
-
-                if (users.length === 0) {
-                    return interaction.reply({
-                        content: "❌ Nenhum usuário disponível para adicionar!",
-                        ephemeral: true,
-                    });
-                }
-
-                const rows = [];
-                let currentRow = new ActionRowBuilder();
-                let buttonCount = 0;
-
-                users.forEach((member, index) => {
-                    const button = new ButtonBuilder()
-                        .setCustomId(`add_user_${member.user.id}`)
-                        .setLabel(member.user.username.substring(0, 80))
-                        .setStyle(ButtonStyle.Success);
-
-                    currentRow.addComponents(button);
-                    buttonCount++;
-
-                    if (buttonCount === 5 || index === users.length - 1) {
-                        rows.push(currentRow);
-                        currentRow = new ActionRowBuilder();
-                        buttonCount = 0;
-                    }
-                });
-
-                const embed = new EmbedBuilder()
-                    .setTitle("➕ Adicionar Usuário ao Ticket")
-                    .setDescription(
-                        "Clique no botão do usuário que deseja adicionar:",
-                    )
-                    .setColor(0x00ff00)
-                    .setTimestamp();
-
-                return await interaction.reply({
-                    embeds: [embed],
-                    components: rows.slice(0, 5),
-                    ephemeral: true,
-                });
-            } catch (error) {
-                console.error("Erro ao buscar membros:", error);
-                return await interaction.reply({
-                    content: "❌ Erro ao buscar membros do servidor!",
-                    ephemeral: true,
-                });
-            }
-        }
-
-        if (interaction.customId === "ticket_remove_user") {
-            try {
-                const members = await interaction.guild.members.fetch();
-                const users = members
-                    .filter((member) => !member.user.bot)
-                    .map((member) => member)
-                    .slice(0, 25);
-
-                if (users.length === 0) {
-                    return interaction.reply({
-                        content: "❌ Nenhum usuário disponível para remover!",
-                        ephemeral: true,
-                    });
-                }
-
-                const rows = [];
-                let currentRow = new ActionRowBuilder();
-                let buttonCount = 0;
-
-                users.forEach((member, index) => {
-                    const button = new ButtonBuilder()
-                        .setCustomId(`remove_user_${member.user.id}`)
-                        .setLabel(member.user.username.substring(0, 80))
-                        .setStyle(ButtonStyle.Danger);
-
-                    currentRow.addComponents(button);
-                    buttonCount++;
-
-                    if (buttonCount === 5 || index === users.length - 1) {
-                        rows.push(currentRow);
-                        currentRow = new ActionRowBuilder();
-                        buttonCount = 0;
-                    }
-                });
-
-                const embed = new EmbedBuilder()
-                    .setTitle("➖ Remover Usuário do Ticket")
-                    .setDescription(
-                        "Clique no botão do usuário que deseja remover:",
-                    )
-                    .setColor(0xff0000)
-                    .setTimestamp();
-
-                return await interaction.reply({
-                    embeds: [embed],
-                    components: rows.slice(0, 5),
-                    ephemeral: true,
-                });
-            } catch (error) {
-                console.error("Erro ao buscar membros:", error);
-                return await interaction.reply({
-                    content: "❌ Erro ao buscar membros do servidor!",
-                    ephemeral: true,
-                });
-            }
-        }
-
         if (interaction.customId === "ticket_notify_staff") {
-                await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ ephemeral: true });
 
-                const context = getTicketContext(interaction.channelId);
-                if (!context) {
-                    return interaction.editReply({
+            const context = getTicketContext(interaction.channelId);
+            if (!context) {
+                return interaction.editReply({
+                    content:
+                        "❌ Não foi possível recuperar as informações deste ticket!",
+                });
+            }
+
+            const panelConfig = getPanelConfig(
+                context.guildId,
+                context.panelId,
+            );
+            if (!panelConfig) {
+                return interaction.editReply({
+                    content: "❌ Configuração do painel não encontrada!",
+                });
+            }
+
+            const modal = new ModalBuilder()
+                .setCustomId("modal_notify_staff")
+                .setTitle("Notificar Equipe de Suporte");
+
+            const messageInput = new TextInputBuilder()
+                .setCustomId("staff_message")
+                .setLabel("Mensagem para a equipe")
+                .setStyle(TextInputStyle.Paragraph)
+                .setPlaceholder(
+                    "Digite a mensagem que será enviada à equipe de suporte...",
+                )
+                .setRequired(true)
+                .setMaxLength(2000);
+
+            const row = new ActionRowBuilder().addComponents(messageInput);
+            modal.addComponents(row);
+
+            await interaction.editReply({
+                content: "⏳ Aguarde...",
+            });
+
+            setTimeout(async () => {
+                try {
+                    await interaction.followUp({
                         content:
-                            "❌ Não foi possível recuperar as informações deste ticket!",
+                            "Por favor, clique novamente no botão 'Notificar Staff' para abrir o formulário.",
+                        ephemeral: true,
                     });
+                } catch (e) {
+                    console.error("Erro ao enviar followUp:", e);
                 }
-
-                const panelConfig = getPanelConfig(
-                    context.guildId,
-                    context.panelId,
-                );
-                if (!panelConfig) {
-                    return interaction.editReply({
-                        content: "❌ Configuração do painel não encontrada!",
-                    });
-                }
-
-                const mentionRoles =
-                    panelConfig.supportRoles &&
-                    panelConfig.supportRoles.length > 0
-                        ? panelConfig.supportRoles
-                              .map((roleId) => `<@&${roleId}>`)
-                              .join(" ")
-                        : panelConfig.supportRoleId
-                          ? `<@&${panelConfig.supportRoleId}>`
-                          : "";
-
-                if (mentionRoles) {
-                    return await interaction.editReply({
-                        content: `✅ Equipe de suporte notificada!\n\n🔔 **Cargos notificados:** ${mentionRoles}`,
-                    });
-                } else {
-                    return await interaction.editReply({
-                        content:
-                            "❌ Nenhum cargo de suporte configurado para notificar!",
-                    });
-                }
+            }, 1000);
         }
 
         if (interaction.customId === "ticket_unclaim") {
-                await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ ephemeral: true });
 
-                const channel = interaction.channel;
+            const channel = interaction.channel;
 
-                if (!channel.name.startsWith("ticket-de-")) {
-                    return interaction.editReply({
+            if (!channel.name.startsWith("ticket-de-")) {
+                return interaction.editReply({
+                    content:
+                        "❌ Este comando só pode ser usado em canais de ticket!",
+                });
+            }
+
+            const currentClaimant = ticketClaimedBy.get(channel.id);
+            if (!currentClaimant) {
+                return interaction.editReply({
+                    content:
+                        "❌ Este ticket não foi reivindicado por ninguém!",
+                });
+            }
+
+            if (currentClaimant !== interaction.user.tag) {
+                return interaction.editReply({
+                    content: `❌ Você não pode desistir deste ticket! Ele foi reivindicado por **${currentClaimant}**.`,
+                });
+            }
+
+            const context = getTicketContext(channel.id);
+            let ticketMessage = null;
+
+            try {
+                if (context && context.controlMessageId) {
+                    ticketMessage = await channel.messages.fetch(
+                        context.controlMessageId,
+                    );
+                } else {
+                    const messages = await channel.messages.fetch({
+                        limit: 10,
+                    });
+                    ticketMessage = messages.find(
+                        (msg) =>
+                            msg.author.id === client.user.id &&
+                            msg.embeds.length > 0 &&
+                            msg.embeds[0].title === "🎫 Ticket - Menu Inicial",
+                    );
+                }
+
+                if (!ticketMessage) {
+                    return await interaction.editReply({
                         content:
-                            "❌ Este comando só pode ser usado em canais de ticket!",
+                            "❌ Não foi possível encontrar a mensagem de controle do ticket!",
                     });
                 }
 
-                const currentClaimant = ticketClaimedBy.get(channel.id);
-                if (!currentClaimant) {
-                    return interaction.editReply({
-                        content:
-                            "❌ Este ticket não foi reivindicado por ninguém!",
-                    });
-                }
+                const oldEmbed = ticketMessage.embeds[0];
+                const updatedEmbed = EmbedBuilder.from(oldEmbed);
 
-                if (currentClaimant !== interaction.user.tag) {
-                    return interaction.editReply({
-                        content: `❌ Você não pode desistir deste ticket! Ele foi reivindicado por **${currentClaimant}**.`,
-                    });
-                }
-
-                const context = getTicketContext(channel.id);
-                let ticketMessage = null;
-
-                try {
-                    if (context && context.controlMessageId) {
-                        ticketMessage = await channel.messages.fetch(
-                            context.controlMessageId,
-                        );
-                    } else {
-                        const messages = await channel.messages.fetch({
-                            limit: 10,
-                        });
-                        ticketMessage = messages.find(
-                            (msg) =>
-                                msg.author.id === client.user.id &&
-                                msg.embeds.length > 0 &&
-                                msg.embeds[0].title ===
-                                    "🎫 Ticket - Menu Inicial",
-                        );
+                updatedEmbed.data.fields = oldEmbed.fields.map((field) => {
+                    if (field.name === "👮 Staff") {
+                        return {
+                            ...field,
+                            value: "Ninguém reivindicou esse ticket!",
+                        };
                     }
+                    return field;
+                });
 
-                    if (!ticketMessage) {
-                        return await interaction.editReply({
-                            content:
-                                "❌ Não foi possível encontrar a mensagem de controle do ticket!",
-                        });
-                    }
+                await ticketMessage.edit({
+                    embeds: [updatedEmbed],
+                    components: ticketMessage.components,
+                });
 
-                    const oldEmbed = ticketMessage.embeds[0];
-                    const updatedEmbed = EmbedBuilder.from(oldEmbed);
-
-                    updatedEmbed.data.fields = oldEmbed.fields.map((field) => {
-                        if (field.name === "👮 Staff") {
-                            return {
-                                ...field,
-                                value: "Ninguém reivindicou esse ticket!",
-                            };
-                        }
-                        return field;
-                    });
-
-                    await ticketMessage.edit({
-                        embeds: [updatedEmbed],
-                        components: ticketMessage.components,
-                    });
-
-                    ticketClaimedBy.delete(channel.id);
+                ticketClaimedBy.delete(channel.id);
 
                 return await interaction.editReply({
                     content:
@@ -2795,56 +2786,6 @@ client.on("interactionCreate", async (interaction) => {
                 return await interaction.editReply({
                     content:
                         "❌ Erro ao atualizar o ticket. A mensagem de controle pode ter sido deletada.",
-                });
-            }
-        }
-
-        if (interaction.customId.startsWith("add_user_")) {
-            const userId = interaction.customId.replace("add_user_", "");
-
-            try {
-                const user = await interaction.guild.members.fetch(userId);
-
-                await interaction.channel.permissionOverwrites.create(user, {
-                    ViewChannel: true,
-                    SendMessages: true,
-                    ReadMessageHistory: true,
-                });
-
-                await interaction.update({
-                    content: `✅ Usuário ${user} adicionado ao ticket com sucesso!`,
-                    embeds: [],
-                    components: [],
-                });
-            } catch (error) {
-                console.error("Erro ao adicionar usuário:", error);
-                await interaction.update({
-                    content: "❌ Erro ao adicionar usuário ao ticket!",
-                    embeds: [],
-                    components: [],
-                });
-            }
-        }
-
-        if (interaction.customId.startsWith("remove_user_")) {
-            const userId = interaction.customId.replace("remove_user_", "");
-
-            try {
-                const user = await interaction.guild.members.fetch(userId);
-
-                await interaction.channel.permissionOverwrites.delete(user);
-
-                await interaction.update({
-                    content: `✅ Usuário ${user} removido do ticket com sucesso!`,
-                    embeds: [],
-                    components: [],
-                });
-            } catch (error) {
-                console.error("Erro ao remover usuário:", error);
-                await interaction.update({
-                    content: "❌ Erro ao remover usuário do ticket!",
-                    embeds: [],
-                    components: [],
                 });
             }
         }
@@ -3051,9 +2992,90 @@ client.on("interactionCreate", async (interaction) => {
                 });
             }
         }
+
+        if (interaction.customId === "ticket_add_member") {
+            const userId = interaction.values[0];
+
+            if (userId === "error" || userId === "none") {
+                return interaction.reply({
+                    content: "❌ Não é possível adicionar este membro.",
+                    ephemeral: true,
+                });
+            }
+
+            try {
+                const member = await interaction.guild.members.fetch(userId);
+
+                await interaction.channel.permissionOverwrites.create(member, {
+                    ViewChannel: true,
+                    SendMessages: true,
+                    ReadMessageHistory: true,
+                });
+
+                const addEmbed = new EmbedBuilder()
+                    .setTitle("✅ Membro Adicionado")
+                    .setDescription(
+                        `${member} foi adicionado ao ticket por ${interaction.user}.`,
+                    )
+                    .setColor(0x00ff00)
+                    .setFooter({ text: "Powered by 7M Store" })
+                    .setTimestamp();
+
+                await interaction.reply({ embeds: [addEmbed] });
+
+                console.log(
+                    `✅ Membro ${member.user.tag} adicionado ao ${interaction.channel.name} por ${interaction.user.tag}`,
+                );
+            } catch (error) {
+                console.error("❌ Erro ao adicionar membro:", error);
+                return interaction.reply({
+                    content:
+                        "❌ Erro ao adicionar o membro. Verifique as permissões do bot.",
+                    ephemeral: true,
+                });
+            }
+        }
+
+        if (interaction.customId === "ticket_remove_member") {
+            const userId = interaction.values[0];
+
+            if (userId === "error" || userId === "none") {
+                return interaction.reply({
+                    content: "❌ Não há membros para remover.",
+                    ephemeral: true,
+                });
+            }
+
+            try {
+                const member = await interaction.guild.members.fetch(userId);
+
+                await interaction.channel.permissionOverwrites.delete(member);
+
+                const removeEmbed = new EmbedBuilder()
+                    .setTitle("🚫 Membro Removido")
+                    .setDescription(
+                        `${member} foi removido do ticket por ${interaction.user}.`,
+                    )
+                    .setColor(0xff6b6b)
+                    .setFooter({ text: "Powered by 7M Store" })
+                    .setTimestamp();
+
+                await interaction.reply({ embeds: [removeEmbed] });
+
+                console.log(
+                    `🚫 Membro ${member.user.tag} removido do ${interaction.channel.name} por ${interaction.user.tag}`,
+                );
+            } catch (error) {
+                console.error("❌ Erro ao remover membro:", error);
+                return interaction.reply({
+                    content:
+                        "❌ Erro ao remover o membro. Verifique as permissões do bot.",
+                    ephemeral: true,
+                });
+            }
+        }
     }
 
-    // Modal submissions
     if (interaction.isModalSubmit()) {
         if (interaction.customId === "modal_notify_user") {
             const context = getTicketContext(interaction.channelId);
@@ -3088,6 +3110,84 @@ client.on("interactionCreate", async (interaction) => {
             }
         }
 
+        if (interaction.customId === "modal_notify_staff") {
+            const context = getTicketContext(interaction.channelId);
+            if (!context) {
+                return interaction.reply({
+                    content:
+                        "❌ Não foi possível recuperar as informações deste ticket!",
+                    ephemeral: true,
+                });
+            }
+
+            const panelConfig = getPanelConfig(
+                context.guildId,
+                context.panelId,
+            );
+            if (!panelConfig) {
+                return interaction.reply({
+                    content: "❌ Configuração do painel não encontrada!",
+                    ephemeral: true,
+                });
+            }
+
+            const message =
+                interaction.fields.getTextInputValue("staff_message");
+
+            const mentionRoles =
+                panelConfig.supportRoles && panelConfig.supportRoles.length > 0
+                    ? panelConfig.supportRoles
+                          .map((roleId) => `<@&${roleId}>`)
+                          .join(" ")
+                    : panelConfig.supportRoleId
+                      ? `<@&${panelConfig.supportRoleId}>`
+                      : "";
+
+            const staffEmbed = new EmbedBuilder()
+                .setTitle("🔔 Notificação da Equipe")
+                .setDescription(message)
+                .setColor(0x5865f2)
+                .setFooter({
+                    text: `Solicitado por ${interaction.user.tag}`,
+                    iconURL: interaction.user.displayAvatarURL(),
+                })
+                .setTimestamp();
+
+            const goToTicketButton = new ButtonBuilder()
+                .setLabel("Ir para o Ticket")
+                .setEmoji("🔗")
+                .setStyle(ButtonStyle.Link)
+                .setURL(
+                    `https://discord.com/channels/${interaction.guildId}/${interaction.channelId}`,
+                );
+
+            const buttonRow = new ActionRowBuilder().addComponents(
+                goToTicketButton,
+            );
+
+            try {
+                await interaction.channel.send({
+                    content: mentionRoles,
+                    embeds: [staffEmbed],
+                    components: [buttonRow],
+                });
+
+                await interaction.reply({
+                    content: "✅ Equipe de suporte notificada com sucesso!",
+                    ephemeral: true,
+                });
+
+                console.log(
+                    `🔔 Staff notificado no ticket ${interaction.channel.name} por ${interaction.user.tag}`,
+                );
+            } catch (error) {
+                console.error("❌ Erro ao notificar staff:", error);
+                await interaction.reply({
+                    content: "❌ Erro ao enviar notificação para a equipe.",
+                    ephemeral: true,
+                });
+            }
+        }
     }
 });
 
