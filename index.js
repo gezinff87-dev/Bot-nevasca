@@ -836,7 +836,9 @@ client.on("interactionCreate", async (interaction) => {
             const components = [];
 
             if (panelType === "select_menu") {
-                const defaultSelectTitle = "Suporte";
+                const defaultSelectAuthor = "Suporte";
+                const defaultSelectAuthorIcon =
+                    "https://i.postimg.cc/mkhf55vf/group-icon.png";
                 const defaultSelectDescription =
                     "Está precisando de ajuda ou quer denunciar algum problema?\nEscolha a opção abaixo e aguarde a equipe de suporte!";
                 const defaultSelectImage =
@@ -851,9 +853,12 @@ client.on("interactionCreate", async (interaction) => {
                 const titleValue =
                     custom.title !== undefined
                         ? (custom.title || "").trim()
-                        : defaultSelectTitle;
+                        : defaultSelectAuthor;
                 if (titleValue) {
-                    embed.setTitle(titleValue);
+                    embed.setAuthor({
+                        name: titleValue,
+                        iconURL: defaultSelectAuthorIcon,
+                    });
                 }
 
                 const descValue =
@@ -2116,7 +2121,7 @@ client.on("interactionCreate", async (interaction) => {
                         },
                     )
                     .setColor(0x5865f2)
-                    .setFooter({ text: "Mensagem de: DRAGON STORE" })
+                    .setFooter({ text: "Powered by 7M" })
                     .setTimestamp();
 
                 const row = buildTicketControls();
@@ -2144,7 +2149,7 @@ client.on("interactionCreate", async (interaction) => {
 
                 const goToTicketButton = new ButtonBuilder()
                     .setLabel("Go to Ticket")
-                    .setEmoji("🔗")
+                    .setEmoji("<:emoji_1:1439056403934351571>")
                     .setStyle(ButtonStyle.Link)
                     .setURL(
                         `https://discord.com/channels/${interaction.guildId}/${ticketChannel.id}`,
@@ -2510,9 +2515,102 @@ client.on("interactionCreate", async (interaction) => {
                     unclaimButton,
                 );
 
+                const addMemberSelect = new StringSelectMenuBuilder()
+                    .setCustomId("ticket_add_member")
+                    .setPlaceholder("➕ Adicionar membro ao ticket")
+                    .setMinValues(1)
+                    .setMaxValues(1);
+
+                const removeMemberSelect = new StringSelectMenuBuilder()
+                    .setCustomId("ticket_remove_member")
+                    .setPlaceholder("➖ Remover membro do ticket")
+                    .setMinValues(1)
+                    .setMaxValues(1);
+
+                try {
+                    const members = await interaction.guild.members.fetch();
+                    const nonBotMembers = members
+                        .filter((member) => !member.user.bot)
+                        .first(25);
+
+                    nonBotMembers.forEach((member) => {
+                        const option = new StringSelectMenuOptionBuilder()
+                            .setLabel(
+                                member.user.username.substring(0, 100) ||
+                                    member.user.tag,
+                            )
+                            .setValue(member.user.id)
+                            .setDescription(
+                                `ID: ${member.user.id.substring(0, 100)}`,
+                            );
+
+                        addMemberSelect.addOptions(option);
+                    });
+
+                    const channelMembers = interaction.channel.permissionOverwrites.cache
+                        .filter(
+                            (perm) =>
+                                perm.type === 1 &&
+                                perm.id !== interaction.guild.roles.everyone.id &&
+                                perm.id !== client.user.id &&
+                                perm.id !== context.userId,
+                        )
+                        .map((perm) => perm.id);
+
+                    if (channelMembers.length > 0) {
+                        channelMembers.slice(0, 25).forEach((memberId) => {
+                            const member = members.get(memberId);
+                            if (member && !member.user.bot) {
+                                const option =
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel(
+                                            member.user.username.substring(
+                                                0,
+                                                100,
+                                            ) || member.user.tag,
+                                        )
+                                        .setValue(member.user.id)
+                                        .setDescription(
+                                            `ID: ${member.user.id.substring(0, 100)}`,
+                                        );
+
+                                removeMemberSelect.addOptions(option);
+                            }
+                        });
+                    } else {
+                        removeMemberSelect.addOptions(
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel("Nenhum membro adicional no ticket")
+                                .setValue("none")
+                                .setDescription("Adicione membros primeiro"),
+                        );
+                    }
+                } catch (error) {
+                    console.error("Erro ao buscar membros:", error);
+                    addMemberSelect.addOptions(
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel("Erro ao carregar membros")
+                            .setValue("error")
+                            .setDescription("Tente novamente mais tarde"),
+                    );
+                    removeMemberSelect.addOptions(
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel("Erro ao carregar membros")
+                            .setValue("error")
+                            .setDescription("Tente novamente mais tarde"),
+                    );
+                }
+
+                const settingsRow2 = new ActionRowBuilder().addComponents(
+                    addMemberSelect,
+                );
+                const settingsRow3 = new ActionRowBuilder().addComponents(
+                    removeMemberSelect,
+                );
+
                 return interaction.reply({
                     embeds: [settingsEmbed],
-                    components: [settingsRow1],
+                    components: [settingsRow1, settingsRow2, settingsRow3],
                     ephemeral: true,
                 });
             } catch (error) {
@@ -2817,7 +2915,7 @@ client.on("interactionCreate", async (interaction) => {
                         },
                     )
                     .setColor(0x5865f2)
-                    .setFooter({ text: "Mensagem de: DRAGON STORE" })
+                    .setFooter({ text: "Powered by 7M" })
                     .setTimestamp();
 
                 const row = buildTicketControls();
@@ -2890,6 +2988,88 @@ client.on("interactionCreate", async (interaction) => {
                 console.error("❌ Erro ao criar ticket:", error);
                 return interaction.followUp({
                     content: `❌ Erro ao criar o ticket: ${error.message}`,
+                    ephemeral: true,
+                });
+            }
+        }
+
+        if (interaction.customId === "ticket_add_member") {
+            const userId = interaction.values[0];
+
+            if (userId === "error" || userId === "none") {
+                return interaction.reply({
+                    content: "❌ Não é possível adicionar este membro.",
+                    ephemeral: true,
+                });
+            }
+
+            try {
+                const member = await interaction.guild.members.fetch(userId);
+
+                await interaction.channel.permissionOverwrites.create(member, {
+                    ViewChannel: true,
+                    SendMessages: true,
+                    ReadMessageHistory: true,
+                });
+
+                const addEmbed = new EmbedBuilder()
+                    .setTitle("✅ Membro Adicionado")
+                    .setDescription(
+                        `${member} foi adicionado ao ticket por ${interaction.user}.`,
+                    )
+                    .setColor(0x00ff00)
+                    .setFooter({ text: "Powered by 7M Store" })
+                    .setTimestamp();
+
+                await interaction.reply({ embeds: [addEmbed] });
+
+                console.log(
+                    `✅ Membro ${member.user.tag} adicionado ao ${interaction.channel.name} por ${interaction.user.tag}`,
+                );
+            } catch (error) {
+                console.error("❌ Erro ao adicionar membro:", error);
+                return interaction.reply({
+                    content:
+                        "❌ Erro ao adicionar o membro. Verifique as permissões do bot.",
+                    ephemeral: true,
+                });
+            }
+        }
+
+        if (interaction.customId === "ticket_remove_member") {
+            const userId = interaction.values[0];
+
+            if (userId === "error" || userId === "none") {
+                return interaction.reply({
+                    content: "❌ Não há membros para remover.",
+                    ephemeral: true,
+                });
+            }
+
+            try {
+                const member = await interaction.guild.members.fetch(userId);
+
+                await interaction.channel.permissionOverwrites.delete(member);
+
+                const removeEmbed = new EmbedBuilder()
+                    .setTitle("🚫 Membro Removido")
+                    .setDescription(
+                        `${member} foi removido do ticket por ${interaction.user}.`,
+                    )
+                    .setColor(0xff6b6b)
+                    .setFooter({ text: "Powered by 7M Store" })
+                    .setTimestamp();
+
+                await interaction.reply({ embeds: [removeEmbed] });
+
+                console.log(
+                    `🚫 Membro ${member.user.tag} removido do ${interaction.channel.name} por ${interaction.user.tag}`,
+                );
+            } catch (error) {
+                console.error("❌ Erro ao remover membro:", error);
+                return interaction.reply({
+                    content:
+                        "❌ Erro ao remover o membro. Verifique as permissões do bot.",
                     ephemeral: true,
                 });
             }
