@@ -289,39 +289,275 @@ async function generateTranscript(channel) {
 
         messages = messages.reverse();
 
-        let transcript = `═══════════════════════════════════════\n`;
-        transcript += `📋 TRANSCRIÇÃO DO TICKET\n`;
-        transcript += `═══════════════════════════════════════\n`;
-        transcript += `Canal: #${channel.name}\n`;
-        transcript += `Servidor: ${channel.guild.name}\n`;
-        transcript += `Data: ${new Date().toLocaleString('pt-BR')}\n`;
-        transcript += `Total de Mensagens: ${messages.length}\n`;
-        transcript += `═══════════════════════════════════════\n\n`;
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        let html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcrição do Ticket - ${escapeHtml(channel.name)}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #5865f2 0%, #7289da 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .info-item {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        .info-label {
+            font-size: 12px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        .info-value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .messages {
+            padding: 30px;
+        }
+        .message {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border-left: 4px solid #5865f2;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .message:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 12px;
+            font-size: 18px;
+        }
+        .author {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 16px;
+            flex: 1;
+        }
+        .timestamp {
+            color: #6c757d;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .message-content {
+            color: #495057;
+            line-height: 1.6;
+            font-size: 15px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .attachments {
+            margin-top: 12px;
+            padding: 12px;
+            background: #e7f3ff;
+            border-radius: 8px;
+            border-left: 3px solid #0066cc;
+        }
+        .attachments-title {
+            font-weight: 600;
+            color: #0066cc;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .attachment-link {
+            display: block;
+            color: #0066cc;
+            text-decoration: none;
+            margin: 5px 0;
+            font-size: 13px;
+        }
+        .attachment-link:hover {
+            text-decoration: underline;
+        }
+        .embed-indicator {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fff3cd;
+            border-radius: 6px;
+            color: #856404;
+            font-size: 13px;
+            border-left: 3px solid #ffc107;
+        }
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 10px;
+        }
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #5865f2;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #95a5a6;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Transcrição do Ticket</h1>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Canal</div>
+                    <div class="info-value">#${escapeHtml(channel.name)}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Servidor</div>
+                    <div class="info-value">${escapeHtml(channel.guild.name)}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Data de Geração</div>
+                    <div class="info-value">${new Date().toLocaleString('pt-BR')}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Total de Mensagens</div>
+                    <div class="info-value">${messages.length}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="messages">`;
 
         for (const message of messages) {
             const timestamp = message.createdAt.toLocaleString('pt-BR');
-            const author = message.author.tag;
-            const content = message.content || '[Sem conteúdo de texto]';
+            const author = escapeHtml(message.author.tag);
+            const authorInitial = author.charAt(0).toUpperCase();
+            const content = escapeHtml(message.content || '[Sem conteúdo de texto]');
             
-            transcript += `[${timestamp}] ${author}:\n`;
-            transcript += `${content}\n`;
+            html += `
+            <div class="message">
+                <div class="message-header">
+                    <div class="avatar">${authorInitial}</div>
+                    <div class="author">${author}</div>
+                    <div class="timestamp">${timestamp}</div>
+                </div>
+                <div class="message-content">${content}</div>`;
             
             if (message.attachments.size > 0) {
-                transcript += `📎 Anexos: ${message.attachments.map(a => a.url).join(', ')}\n`;
+                html += `
+                <div class="attachments">
+                    <div class="attachments-title">📎 Anexos (${message.attachments.size}):</div>`;
+                message.attachments.forEach(att => {
+                    html += `<a href="${escapeHtml(att.url)}" target="_blank" class="attachment-link">${escapeHtml(att.name || att.url)}</a>`;
+                });
+                html += `</div>`;
             }
             
             if (message.embeds.length > 0) {
-                transcript += `📊 Embeds: ${message.embeds.length} embed(s)\n`;
+                html += `
+                <div class="embed-indicator">
+                    📊 Esta mensagem contém ${message.embeds.length} embed(s)
+                </div>`;
             }
             
-            transcript += `\n`;
+            html += `
+            </div>`;
         }
 
-        transcript += `═══════════════════════════════════════\n`;
-        transcript += `Fim da transcrição\n`;
-        transcript += `═══════════════════════════════════════\n`;
+        html += `
+        </div>
+        
+        <div class="footer">
+            <div>Powered by 7M Store</div>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value">${messages.length}</div>
+                    <div class="stat-label">Mensagens</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${new Set(messages.map(m => m.author.id)).size}</div>
+                    <div class="stat-label">Participantes</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
 
-        return transcript;
+        return html;
     } catch (error) {
         console.error("❌ Erro ao gerar transcrição:", error);
         return null;
@@ -2376,6 +2612,35 @@ client.on("interactionCreate", async (interaction) => {
                 });
             }
 
+            const modal = new ModalBuilder()
+                .setCustomId("modal_close_ticket")
+                .setTitle("Fechar Ticket");
+
+            const reasonInput = new TextInputBuilder()
+                .setCustomId("close_reason")
+                .setLabel("Motivo do fechamento")
+                .setStyle(TextInputStyle.Paragraph)
+                .setPlaceholder("Digite o motivo pelo qual está fechando este ticket...")
+                .setRequired(true)
+                .setMaxLength(500);
+
+            const row = new ActionRowBuilder().addComponents(reasonInput);
+            modal.addComponents(row);
+
+            return await interaction.showModal(modal);
+        }
+
+        if (interaction.customId === "fechar_ticket_OLD_HANDLER") {
+            const channel = interaction.channel;
+
+            if (!channel.name.startsWith("ticket-de-")) {
+                return interaction.reply({
+                    content:
+                        "❌ Este comando só pode ser usado em canais de ticket!",
+                    ephemeral: true,
+                });
+            }
+
             const context = getTicketContext(channel.id);
             if (!context) {
                 console.warn("⚠️ Contexto do ticket não encontrado (bot pode ter sido reiniciado)");
@@ -2988,15 +3253,15 @@ client.on("interactionCreate", async (interaction) => {
             try {
                 const buffer = Buffer.from(transcript, 'utf-8');
                 const attachment = new AttachmentBuilder(buffer, { 
-                    name: `transcript_${channelId}.txt` 
+                    name: `transcript_${channelId}.html` 
                 });
 
                 await interaction.editReply({
-                    content: "📄 Aqui está a transcrição do seu ticket:",
+                    content: "📄 Aqui está a transcrição do seu ticket em HTML:\n💡 Abra o arquivo no seu navegador para visualizar com formatação completa!",
                     files: [attachment]
                 });
 
-                console.log(`✅ Transcrição enviada para ${interaction.user.tag}`);
+                console.log(`✅ Transcrição HTML enviada para ${interaction.user.tag}`);
             } catch (error) {
                 console.error("❌ Erro ao enviar transcrição:", error);
                 return interaction.editReply({
@@ -3242,6 +3507,126 @@ client.on("interactionCreate", async (interaction) => {
                     ephemeral: true,
                 });
             }
+        }
+
+        if (interaction.customId === "modal_close_ticket") {
+            const channel = interaction.channel;
+            const closeReason = interaction.fields.getTextInputValue("close_reason");
+
+            if (!channel.name.startsWith("ticket-de-")) {
+                return interaction.reply({
+                    content: "❌ Este comando só pode ser usado em canais de ticket!",
+                    ephemeral: true,
+                });
+            }
+
+            const context = getTicketContext(channel.id);
+            if (!context) {
+                console.warn("⚠️ Contexto do ticket não encontrado (bot pode ter sido reiniciado)");
+            }
+
+            await interaction.deferReply();
+
+            const transcript = await generateTranscript(channel);
+
+            const closeEmbed = new EmbedBuilder()
+                .setTitle("🔒 Ticket Fechado")
+                .setDescription(
+                    `Ticket fechado por ${interaction.user}.\n\n**Motivo:** ${closeReason}\n\nEste canal será deletado em 5 segundos...`,
+                )
+                .setColor(0xff0000)
+                .setFooter({ text: "Powered by 7M Store" })
+                .setTimestamp();
+
+            await interaction.editReply({ embeds: [closeEmbed] });
+
+            console.log(
+                `🔒 Ticket fechado: ${channel.name} por ${interaction.user.tag} - Motivo: ${closeReason}`,
+            );
+
+            if (context && context.userId) {
+                try {
+                    const ticketUser = await client.users.fetch(context.userId);
+                    
+                    const ticketCategory = context.reason || "Não especificado";
+                    const ticketName = channel.name;
+                    const serverName = interaction.guild.name;
+
+                    const dmEmbed = new EmbedBuilder()
+                        .setTitle("Ticket Fechado")
+                        .setDescription(`Este ticket foi fechado por ${interaction.user}.`)
+                        .addFields(
+                            { name: "Motivo", value: ticketCategory, inline: false },
+                            { name: "Nome do Ticket", value: ticketName, inline: false },
+                            { name: "Servidor", value: serverName, inline: false }
+                        )
+                        .setColor(0x5865f2)
+                        .setTimestamp();
+
+                    const transcriptButton = new ButtonBuilder()
+                        .setCustomId(`view_transcript:${channel.id}`)
+                        .setLabel("Ver Transcrição")
+                        .setEmoji("📄")
+                        .setStyle(ButtonStyle.Secondary);
+
+                    const transcriptRow = new ActionRowBuilder().addComponents(transcriptButton);
+
+                    await ticketUser.send({
+                        embeds: [dmEmbed],
+                        components: [transcriptRow]
+                    });
+
+                    console.log(`✅ DM enviada para ${ticketUser.tag} sobre o fechamento do ticket`);
+
+                    if (transcript) {
+                        const transcriptMap = new Map();
+                        transcriptMap.set(channel.id, transcript);
+                        client.transcriptCache = client.transcriptCache || new Map();
+                        client.transcriptCache.set(channel.id, transcript);
+                    }
+
+                } catch (dmError) {
+                    console.error(`❌ Erro ao enviar DM para o usuário ${context.userId}:`, dmError.message);
+                    console.log("⚠️ O usuário pode ter DMs desativadas ou bloqueou o bot");
+                }
+            }
+
+            const guildConfig = config[interaction.guildId];
+            if (guildConfig?.panels) {
+                let logSent = false;
+                for (const panel of Object.values(guildConfig.panels)) {
+                    if (panel.logsChannelId && !logSent) {
+                        const logsChannel = interaction.guild.channels.cache.get(panel.logsChannelId);
+                        if (logsChannel) {
+                            const username = channel.name.replace("ticket-de-", "");
+
+                            const logEmbed = new EmbedBuilder()
+                                .setTitle("🔒 Ticket Fechado")
+                                .setDescription(
+                                    `**Username do Ticket:** ${username}\n` +
+                                        `**Fechado por:** ${interaction.user} (${interaction.user.tag})\n` +
+                                        `**Motivo:** ${closeReason}\n` +
+                                        `**Canal:** #${channel.name}\n` +
+                                        `**Horário:** <t:${Math.floor(Date.now() / 1000)}:F>`,
+                                )
+                                .setColor(0xff0000)
+                                .setFooter({ text: "Powered by 7M Store" })
+                                .setTimestamp();
+
+                            await logsChannel.send({ embeds: [logEmbed] }).catch((err) => {
+                                console.error("❌ Erro ao enviar log de ticket fechado:", err);
+                            });
+                            logSent = true;
+                        }
+                    }
+                }
+            }
+
+            setTimeout(() => {
+                channel.delete().catch((err) => {
+                    console.error("❌ Erro ao deletar canal:", err);
+                });
+            }, 5000);
         }
 
     }
