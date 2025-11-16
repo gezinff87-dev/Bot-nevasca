@@ -3532,7 +3532,7 @@ client.on("interactionCreate", async (interaction) => {
             const closeEmbed = new EmbedBuilder()
                 .setTitle("🔒 Ticket Fechado")
                 .setDescription(
-                    `Ticket fechado por ${interaction.user}.\n\n**Motivo:** ${closeReason}\n\nEste canal será deletado em 5 segundos...`,
+                    `Ticket fechado por ${interaction.user}.\n\nEste canal será deletado em 5 segundos...`,
                 )
                 .setColor(0xff0000)
                 .setFooter({ text: "Powered by 7M Store" })
@@ -3548,7 +3548,6 @@ client.on("interactionCreate", async (interaction) => {
                 try {
                     const ticketUser = await client.users.fetch(context.userId);
                     
-                    const ticketCategory = context.reason || "Não especificado";
                     const ticketName = channel.name;
                     const serverName = interaction.guild.name;
 
@@ -3556,7 +3555,7 @@ client.on("interactionCreate", async (interaction) => {
                         .setTitle("Ticket Fechado")
                         .setDescription(`Este ticket foi fechado por ${interaction.user}.`)
                         .addFields(
-                            { name: "Motivo", value: ticketCategory, inline: false },
+                            { name: "Motivo do Fechamento", value: closeReason, inline: false },
                             { name: "Nome do Ticket", value: ticketName, inline: false },
                             { name: "Servidor", value: serverName, inline: false }
                         )
