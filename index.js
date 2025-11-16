@@ -15,6 +15,7 @@ const {
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle,
+    AttachmentBuilder,
 } = require("discord.js");
 const express = require("express");
 const fs = require("fs");
@@ -264,6 +265,67 @@ function getPanelConfig(guildId, panelId) {
         return null;
     }
     return config[guildId].panels[panelId];
+}
+
+async function generateTranscript(channel) {
+    try {
+        let messages = [];
+        let lastId;
+
+        while (true) {
+            const options = { limit: 100 };
+            if (lastId) {
+                options.before = lastId;
+            }
+
+            const fetchedMessages = await channel.messages.fetch(options);
+            if (fetchedMessages.size === 0) break;
+
+            messages.push(...fetchedMessages.values());
+            lastId = fetchedMessages.last().id;
+
+            if (fetchedMessages.size < 100) break;
+        }
+
+        messages = messages.reverse();
+
+        let transcript = `═══════════════════════════════════════\n`;
+        transcript += `📋 TRANSCRIÇÃO DO TICKET\n`;
+        transcript += `═══════════════════════════════════════\n`;
+        transcript += `Canal: #${channel.name}\n`;
+        transcript += `Servidor: ${channel.guild.name}\n`;
+        transcript += `Data: ${new Date().toLocaleString('pt-BR')}\n`;
+        transcript += `Total de Mensagens: ${messages.length}\n`;
+        transcript += `═══════════════════════════════════════\n\n`;
+
+        for (const message of messages) {
+            const timestamp = message.createdAt.toLocaleString('pt-BR');
+            const author = message.author.tag;
+            const content = message.content || '[Sem conteúdo de texto]';
+            
+            transcript += `[${timestamp}] ${author}:\n`;
+            transcript += `${content}\n`;
+            
+            if (message.attachments.size > 0) {
+                transcript += `📎 Anexos: ${message.attachments.map(a => a.url).join(', ')}\n`;
+            }
+            
+            if (message.embeds.length > 0) {
+                transcript += `📊 Embeds: ${message.embeds.length} embed(s)\n`;
+            }
+            
+            transcript += `\n`;
+        }
+
+        transcript += `═══════════════════════════════════════\n`;
+        transcript += `Fim da transcrição\n`;
+        transcript += `═══════════════════════════════════════\n`;
+
+        return transcript;
+    } catch (error) {
+        console.error("❌ Erro ao gerar transcrição:", error);
+        return null;
+    }
 }
 
 function checkEnvironmentVariables() {
@@ -2096,6 +2158,7 @@ client.on("interactionCreate", async (interaction) => {
                     panelId: panelId,
                     userId: interaction.user.id,
                     channelId: ticketChannel.id,
+                    reason: buttonLabel,
                 });
 
                 const ticketEmbed = new EmbedBuilder()
@@ -2313,6 +2376,15 @@ client.on("interactionCreate", async (interaction) => {
                 });
             }
 
+            const context = getTicketContext(channel.id);
+            if (!context) {
+                console.warn("⚠️ Contexto do ticket não encontrado (bot pode ter sido reiniciado)");
+            }
+
+            await interaction.deferReply();
+
+            const transcript = await generateTranscript(channel);
+
             const closeEmbed = new EmbedBuilder()
                 .setTitle("🔒 Ticket Fechado")
                 .setDescription(
@@ -2322,11 +2394,58 @@ client.on("interactionCreate", async (interaction) => {
                 .setFooter({ text: "Powered by 7M Store" })
                 .setTimestamp();
 
-            await interaction.reply({ embeds: [closeEmbed] });
+            await interaction.editReply({ embeds: [closeEmbed] });
 
             console.log(
                 `🔒 Ticket fechado: ${channel.name} por ${interaction.user.tag}`,
             );
+
+            if (context && context.userId) {
+                try {
+                    const ticketUser = await client.users.fetch(context.userId);
+                    
+                    const reason = context.reason || "Não especificado";
+                    const ticketName = channel.name;
+                    const serverName = interaction.guild.name;
+
+                    const dmEmbed = new EmbedBuilder()
+                        .setTitle("Ticket Fechado")
+                        .setDescription(`Este ticket foi fechado por ${interaction.user}.`)
+                        .addFields(
+                            { name: "Motivo", value: reason, inline: false },
+                            { name: "Nome do Ticket", value: ticketName, inline: false },
+                            { name: "Servidor", value: serverName, inline: false }
+                        )
+                        .setColor(0x5865f2)
+                        .setTimestamp();
+
+                    const transcriptButton = new ButtonBuilder()
+                        .setCustomId(`view_transcript:${channel.id}`)
+                        .setLabel("Ver Transcrição")
+                        .setEmoji("📄")
+                        .setStyle(ButtonStyle.Secondary);
+
+                    const transcriptRow = new ActionRowBuilder().addComponents(transcriptButton);
+
+                    await ticketUser.send({
+                        embeds: [dmEmbed],
+                        components: [transcriptRow]
+                    });
+
+                    console.log(`✅ DM enviada para ${ticketUser.tag} sobre o fechamento do ticket`);
+
+                    if (transcript) {
+                        const transcriptMap = new Map();
+                        transcriptMap.set(channel.id, transcript);
+                        client.transcriptCache = client.transcriptCache || new Map();
+                        client.transcriptCache.set(channel.id, transcript);
+                    }
+
+                } catch (dmError) {
+                    console.error(`❌ Erro ao enviar DM para o usuário ${context.userId}:`, dmError.message);
+                    console.log("⚠️ O usuário pode ter DMs desativadas ou bloqueou o bot");
+                }
+            }
 
             const guildConfig = config[interaction.guildId];
             if (guildConfig?.panels) {
@@ -2429,7 +2548,6 @@ client.on("interactionCreate", async (interaction) => {
             }
         }
 
-        // Ticket gear interactions
         if (interaction.customId === "ticket_settings") {
             try {
                 const context = getTicketContext(interaction.channelId);
@@ -2848,6 +2966,44 @@ client.on("interactionCreate", async (interaction) => {
                 });
             }
         }
+
+        if (interaction.customId.startsWith("view_transcript:")) {
+            await interaction.deferReply({ ephemeral: true });
+
+            const channelId = interaction.customId.split(":")[1];
+            
+            if (!client.transcriptCache) {
+                client.transcriptCache = new Map();
+            }
+
+            const transcript = client.transcriptCache.get(channelId);
+
+            if (!transcript) {
+                return interaction.editReply({
+                    content: "❌ Transcrição não disponível. O ticket pode ter sido fechado há muito tempo.",
+                    ephemeral: true
+                });
+            }
+
+            try {
+                const buffer = Buffer.from(transcript, 'utf-8');
+                const attachment = new AttachmentBuilder(buffer, { 
+                    name: `transcript_${channelId}.txt` 
+                });
+
+                await interaction.editReply({
+                    content: "📄 Aqui está a transcrição do seu ticket:",
+                    files: [attachment]
+                });
+
+                console.log(`✅ Transcrição enviada para ${interaction.user.tag}`);
+            } catch (error) {
+                console.error("❌ Erro ao enviar transcrição:", error);
+                return interaction.editReply({
+                    content: "❌ Erro ao enviar transcrição. Por favor, contate um administrador.",
+                });
+            }
+        }
     }
 
     if (interaction.isStringSelectMenu()) {
@@ -2949,6 +3105,7 @@ client.on("interactionCreate", async (interaction) => {
                     panelId: panelId,
                     userId: interaction.user.id,
                     channelId: ticketChannel.id,
+                    reason: setorSelecionado,
                 });
 
                 const ticketEmbed = new EmbedBuilder()
@@ -3053,7 +3210,6 @@ client.on("interactionCreate", async (interaction) => {
         }
     }
 
-    // Modal submissions
     if (interaction.isModalSubmit()) {
         if (interaction.customId === "modal_notify_user") {
             const context = getTicketContext(interaction.channelId);
