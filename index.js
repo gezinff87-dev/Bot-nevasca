@@ -16,6 +16,7 @@ const {
     TextInputBuilder,
     TextInputStyle,
     AttachmentBuilder,
+    ActivityType,
 } = require("discord.js");
 const express = require("express");
 const fs = require("fs");
@@ -942,7 +943,30 @@ client.once("ready", () => {
     loadConfig();
     registerCommands();
 
-    client.user.setActivity("tickets | /criar_painel", { type: 3 });
+    const streamingMessages = [
+        "Dúvidas? Abra um ticket!",
+        "Sistema de tickets 24/7",
+        "Estamos aqui para ajudar!"
+    ];
+    
+    let currentMessageIndex = 0;
+
+    const updatePresence = () => {
+        client.user.setPresence({
+            activities: [{
+                name: streamingMessages[currentMessageIndex],
+                type: ActivityType.Streaming,
+                url: "https://www.twitch.tv/discord"
+            }],
+            status: 'online'
+        });
+        
+        currentMessageIndex = (currentMessageIndex + 1) % streamingMessages.length;
+    };
+
+    updatePresence();
+    
+    setInterval(updatePresence, 10000);
 
     setInterval(
         () => {
