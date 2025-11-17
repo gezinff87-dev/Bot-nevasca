@@ -1177,10 +1177,7 @@ client.on("interactionCreate", async (interaction) => {
                         ? (custom.title || "").trim()
                         : defaultSelectAuthor;
                 if (titleValue) {
-                    embed.setAuthor({
-                        name: titleValue,
-                        iconURL: defaultSelectAuthorIcon,
-                    });
+                    embed.setTitle(titleValue);
                 }
 
                 const descValue =
@@ -1204,6 +1201,13 @@ client.on("interactionCreate", async (interaction) => {
                     : "";
                 if (thumbnailValue && isValidUrl(thumbnailValue)) {
                     embed.setThumbnail(thumbnailValue);
+                }
+
+                const footerValue = custom.footer
+                    ? custom.footer.trim()
+                    : "";
+                if (footerValue) {
+                    embed.setFooter({ text: footerValue });
                 }
 
                 const selectMenu = new StringSelectMenuBuilder()
@@ -2079,8 +2083,10 @@ client.on("interactionCreate", async (interaction) => {
                     panelConfig.customization = {};
                 }
 
-                if (texto !== null) {
+                if (texto !== null && texto.trim()) {
                     panelConfig.customization.footer = texto;
+                } else {
+                    delete panelConfig.customization.footer;
                 }
                 saveConfig();
 
